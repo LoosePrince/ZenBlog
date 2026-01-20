@@ -6,6 +6,11 @@ export interface Post {
   category: string;
   contentPath: string;
   image?: string;
+  author?: {
+    name: string;
+    avatar: string;
+    username: string;
+  };
 }
 
 export interface Profile {

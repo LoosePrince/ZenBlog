@@ -30,6 +30,27 @@ export class GitHubService {
     return { content, sha: data.sha };
   }
 
+  // 获取文件的最后提交者信息
+  async getFileAuthor(path: string): Promise<{ name: string; avatar: string; username: string } | null> {
+    try {
+      const branch = this.config.branch || 'data';
+      const commits = await this.request(`commits?path=${path}&sha=${branch}&per_page=1`);
+      
+      if (commits && commits.length > 0) {
+        const commit = commits[0];
+        return {
+          name: commit.commit.author.name,
+          avatar: commit.author?.avatar_url || `https://t.alcy.cc/tx`,
+          username: commit.author?.login || commit.commit.author.name,
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error('Failed to fetch file author:', err);
+      return null;
+    }
+  }
+
   // 原子化：一次性提交多个文件变更
   async commitMultipleFiles(message: string, changes: FileChange[]): Promise<void> {
     if (!this.config.token) throw new Error('操作需要 GitHub Token');

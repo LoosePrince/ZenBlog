@@ -1,27 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, ArrowLeft, Loader2, Edit3, Trash2, Clock, Share2 } from 'lucide-react';
+import { Calendar, ArrowLeft, Loader2, Edit3, Trash2, Clock, Share2, Check, AlertTriangle, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Post, GitHubConfig } from '../types.ts';
-import { GitHubService } from '../services/githubService.ts';
-import { motion } from 'framer-motion';
+import { Post, GitHubConfig, Profile } from '../types';
+import { GitHubService } from '../services/githubService';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../App';
+import toast from 'react-hot-toast';
 
 interface PostDetailProps {
   posts: Post[];
   config: GitHubConfig | null;
+  profile: Profile;
   isAdmin: boolean;
   onDelete: (id: string) => Promise<void>;
 }
 
-const PostDetail: React.FC<PostDetailProps> = ({ posts, config, isAdmin, onDelete }) => {
+const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin, onDelete }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [content, setContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [author, setAuthor] = useState<{ name: string; avatar: string; username: string } | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const post = posts.find((p) => p.id === id);
 
@@ -38,6 +42,10 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, isAdmin, onDelet
         const service = new GitHubService(config);
         const { content } = await service.getFile(post.contentPath);
         setContent(content);
+        
+        // 获取文章作者信息
+        const authorInfo = await service.getFileAuthor(post.contentPath);
+        setAuthor(authorInfo);
       } catch (err: any) {
         setError(err.message || t.post.loadError);
       } finally {
@@ -48,10 +56,51 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, isAdmin, onDelet
     fetchContent();
   }, [id, post, config, t]);
 
-  const handleDelete = async () => {
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
     if (id) {
+      setShowDeleteModal(false);
       await onDelete(id);
       navigate('/');
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = post?.title || 'ZenBlog';
+    const text = post?.excerpt || '';
+
+    // 尝试使用 Web Share API
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title,
+          text,
+          url,
+        });
+        toast.success(t.post?.shareSuccess || '分享成功！');
+      } catch (err) {
+        // 用户取消分享
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Share failed:', err);
+        }
+      }
+    } else {
+      // 降级方案：复制链接
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success(t.post?.linkCopied || '链接已复制到剪贴板！');
+      } catch (err) {
+        console.error('Copy failed:', err);
+        toast.error(t.post?.copyFailed || '复制失败');
+      }
     }
   };
 
@@ -112,10 +161,16 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, isAdmin, onDelet
 
           <div className="flex items-center justify-between pb-10 border-b border-gray-100">
             <div className="flex items-center space-x-4">
-              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" className="w-10 h-10 rounded-full bg-gray-100" />
+              <img 
+                src={author?.avatar || profile.avatar} 
+                alt={author?.name || profile.name}
+                className="w-10 h-10 rounded-full bg-gray-100 border-2 border-gray-100" 
+              />
               <div>
-                <p className="text-sm font-black text-gray-900">{t.post.author}</p>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-tight">{t.post.adminMember}</p>
+                <p className="text-sm font-black text-gray-900">{author?.name || profile.name}</p>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-tight">
+                  {author?.username ? `@${author.username}` : t.post.adminMember}
+                </p>
               </div>
             </div>
             
@@ -129,14 +184,18 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, isAdmin, onDelet
                     <Edit3 size={20} />
                   </Link>
                   <button 
-                    onClick={handleDelete}
+                    onClick={handleDeleteClick}
                     className="p-2.5 bg-gray-50 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all transform hover:scale-105"
                   >
                     <Trash2 size={20} />
                   </button>
                 </>
               )}
-              <button className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-100 hover:shadow-indigo-200 transition-all transform hover:scale-105">
+              <button 
+                onClick={handleShare}
+                className="p-2.5 border-2 border-indigo-300 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all transform hover:scale-105"
+                title={t.post?.share || '分享文章'}
+              >
                 <Share2 size={20} />
               </button>
             </div>
@@ -148,9 +207,41 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, isAdmin, onDelet
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
-        className="prose prose-indigo prose-lg max-w-none prose-headings:font-black prose-headings:tracking-tight prose-p:text-gray-600 prose-p:leading-relaxed prose-img:rounded-[2rem] prose-img:shadow-2xl"
+        className="markdown-content"
+        style={{
+          fontSize: '1.125rem',
+          lineHeight: '1.75',
+          color: '#4b5563',
+        }}
       >
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        <ReactMarkdown 
+          remarkPlugins={[remarkGfm]}
+          components={{
+            h1: ({node, ...props}) => <h1 style={{ fontSize: '2.25rem', fontWeight: '900', color: '#111827', marginTop: '2rem', marginBottom: '1rem', lineHeight: '1.2' }} {...props} />,
+            h2: ({node, ...props}) => <h2 style={{ fontSize: '1.875rem', fontWeight: '800', color: '#111827', marginTop: '1.75rem', marginBottom: '0.875rem', lineHeight: '1.3' }} {...props} />,
+            h3: ({node, ...props}) => <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', marginTop: '1.5rem', marginBottom: '0.75rem', lineHeight: '1.4' }} {...props} />,
+            p: ({node, ...props}) => <p style={{ marginBottom: '1.25rem', lineHeight: '1.75' }} {...props} />,
+            ul: ({node, ...props}) => <ul style={{ marginBottom: '1.25rem', paddingLeft: '1.5rem', listStyleType: 'disc' }} {...props} />,
+            ol: ({node, ...props}) => <ol style={{ marginBottom: '1.25rem', paddingLeft: '1.5rem', listStyleType: 'decimal' }} {...props} />,
+            li: ({node, ...props}) => <li style={{ marginBottom: '0.5rem' }} {...props} />,
+            blockquote: ({node, ...props}) => <blockquote style={{ borderLeft: '4px solid #6366f1', paddingLeft: '1rem', fontStyle: 'italic', color: '#6b7280', marginBottom: '1.25rem' }} {...props} />,
+            code: ({node, className, children, ...props}) => {
+              const isInline = !className;
+              return isInline ? (
+                <code style={{ backgroundColor: '#f3f4f6', padding: '0.125rem 0.375rem', borderRadius: '0.25rem', fontSize: '0.875em', fontFamily: 'monospace' }} {...props}>{children}</code>
+              ) : (
+                <code style={{ display: 'block', backgroundColor: '#f8fafc', color: '#334155', padding: '1rem', borderRadius: '0.5rem', overflow: 'auto', fontSize: '0.875rem', fontFamily: 'monospace', marginBottom: '1.25rem', border: '1px solid #e2e8f0' }} {...props}>{children}</code>
+              );
+            },
+            pre: ({node, ...props}) => <pre style={{ marginBottom: '1.25rem' }} {...props} />,
+            a: ({node, ...props}) => <a style={{ color: '#6366f1', textDecoration: 'underline', fontWeight: '500' }} {...props} />,
+            img: ({node, ...props}) => <img style={{ borderRadius: '1rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', marginTop: '1.5rem', marginBottom: '1.5rem', maxWidth: '100%' }} {...props} />,
+            table: ({node, ...props}) => <div style={{ overflowX: 'auto', marginBottom: '1.25rem' }}><table style={{ width: '100%', borderCollapse: 'collapse' }} {...props} /></div>,
+            th: ({node, ...props}) => <th style={{ border: '1px solid #e5e7eb', padding: '0.75rem', backgroundColor: '#f9fafb', fontWeight: '600', textAlign: 'left' }} {...props} />,
+            td: ({node, ...props}) => <td style={{ border: '1px solid #e5e7eb', padding: '0.75rem' }} {...props} />,
+            hr: ({node, ...props}) => <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', marginTop: '2rem', marginBottom: '2rem' }} {...props} />,
+          }}
+        >
           {content}
         </ReactMarkdown>
       </motion.div>
@@ -166,6 +257,76 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, isAdmin, onDelet
           </Link>
         </div>
       </footer>
+
+      {/* 删除确认模态窗口 */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <>
+            {/* 遮罩层 */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleDeleteCancel}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            >
+              {/* 模态窗口 */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+              >
+                {/* 头部 */}
+                <div className="bg-gradient-to-r from-red-50 to-orange-50 px-6 py-5 border-b border-red-100 flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-red-100 rounded-xl">
+                      <AlertTriangle className="text-red-600" size={24} />
+                    </div>
+                    <h3 className="text-xl font-black text-gray-900">
+                      {t.post.deleteTitle || '确认删除'}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={handleDeleteCancel}
+                    className="p-1 hover:bg-red-100 rounded-lg transition-colors"
+                  >
+                    <X size={20} className="text-gray-400" />
+                  </button>
+                </div>
+
+                {/* 内容 */}
+                <div className="px-6 py-6">
+                  <p className="text-gray-600 text-base leading-relaxed mb-2">
+                    {t.post.deleteConfirm || '确定要删除这篇文章吗？'}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    此操作无法撤销，文章将被永久删除。
+                  </p>
+                </div>
+
+                {/* 底部按钮 */}
+                <div className="px-6 py-4 bg-gray-50 flex items-center justify-end space-x-3">
+                  <button
+                    onClick={handleDeleteCancel}
+                    className="px-6 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-all"
+                  >
+                    {t.common.cancel || '取消'}
+                  </button>
+                  <button
+                    onClick={handleDeleteConfirm}
+                    className="px-6 py-2.5 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all flex items-center space-x-2"
+                  >
+                    <Trash2 size={16} />
+                    <span>{t.common.delete || '删除'}</span>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </article>
   );
 };

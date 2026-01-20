@@ -3,13 +3,15 @@ import { Link, useLocation } from 'react-router-dom';
 import { Settings, PlusSquare, Home, User, ShieldCheck, Languages } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../App';
+import { Profile } from '../types';
 
 interface NavbarProps {
   isAdmin: boolean;
   onToggleAdmin: () => void;
+  profile: Profile;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ isAdmin, onToggleAdmin }) => {
+const Navbar: React.FC<NavbarProps> = ({ isAdmin, onToggleAdmin, profile }) => {
   const location = useLocation();
   const { t, language, setLanguage } = useLanguage();
 
@@ -28,9 +30,13 @@ const Navbar: React.FC<NavbarProps> = ({ isAdmin, onToggleAdmin }) => {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <div className="flex items-center space-x-10">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">Z</div>
-              <span className="text-xl font-black tracking-tight text-gray-900">ZenBlog</span>
+            <Link to="/" className="flex items-center space-x-2 group">
+              <img 
+                src={profile.avatar} 
+                alt={profile.name}
+                className="w-8 h-8 rounded-lg object-cover border-2 border-indigo-100 group-hover:border-indigo-300 transition-all shadow-sm"
+              />
+              <span className="text-xl font-black tracking-tight text-gray-900 group-hover:text-indigo-600 transition-colors">ZenBlog</span>
             </Link>
             
             <div className="hidden md:flex space-x-8">

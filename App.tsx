@@ -7,6 +7,7 @@ import Home from './pages/Home';
 import PostDetail from './pages/PostDetail';
 import Editor from './pages/Editor';
 import Settings from './pages/Settings';
+import About from './pages/About';
 import { Post, Profile, GitHubConfig, PublicConfig, FileChange } from './types';
 import { GitHubService } from './services/githubService';
 import { translations, Language } from './services/i18n';
@@ -59,7 +60,7 @@ const AppContent: React.FC<{
   return (
     <div className="min-h-screen bg-[#f9fafb] text-gray-900 font-sans selection:bg-indigo-100 selection:text-indigo-900">
       <Toaster position="top-center" reverseOrder={false} />
-      <Navbar isAdmin={isAdmin} onToggleAdmin={onToggleAdmin} />
+      <Navbar isAdmin={isAdmin} onToggleAdmin={onToggleAdmin} profile={profile} />
       
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <AnimatePresence mode="wait">
@@ -67,13 +68,13 @@ const AppContent: React.FC<{
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mb-8 p-6 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-3xl text-white shadow-xl shadow-indigo-100 flex flex-col md:flex-row items-center justify-between"
+              className="mb-8 p-6 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-3xl border border-indigo-200 flex flex-col md:flex-row items-center justify-between"
             >
               <div className="mb-4 md:mb-0">
-                <h3 className="text-xl font-bold italic">存算分离模式已就绪</h3>
-                <p className="opacity-90">请配置 Token，数据将自动存储在专用的 <b>data</b> 分支。</p>
+                <h3 className="text-xl font-bold text-indigo-700">存算分离模式已就绪</h3>
+                <p className="text-gray-600">请配置 Token，数据将自动存储在专用的 <b>data</b> 分支。</p>
               </div>
-              <Link to="/settings" className="px-6 py-2 bg-white text-indigo-600 rounded-xl font-bold hover:shadow-lg transition-all active:scale-95">
+              <Link to="/settings" className="px-6 py-2 border-2 border-indigo-300 bg-white text-indigo-600 rounded-xl font-bold hover:bg-indigo-50 transition-all active:scale-95">
                 {t.nav.settings}
               </Link>
             </motion.div>
@@ -96,10 +97,10 @@ const AppContent: React.FC<{
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<PageWrapper><Home posts={posts} profile={profile} isAdmin={isAdmin} /></PageWrapper>} />
-              <Route path="/post/:id" element={<PageWrapper><PostDetail posts={posts} config={config} isAdmin={isAdmin} onDelete={handleDeletePost} /></PageWrapper>} />
+              <Route path="/post/:id" element={<PageWrapper><PostDetail posts={posts} config={config} profile={profile} isAdmin={isAdmin} onDelete={handleDeletePost} /></PageWrapper>} />
               <Route path="/edit/:id" element={<PageWrapper><Editor posts={posts} config={config} onSave={handleSavePost} /></PageWrapper>} />
               <Route path="/settings" element={<PageWrapper><Settings config={config} profile={profile} onSaveConfig={handleSaveConfig} onSaveProfile={handleSaveProfile} onSaveConfigAndProfile={handleSaveConfigAndProfile} /></PageWrapper>} />
-              <Route path="/about" element={<PageWrapper><div className="prose prose-indigo max-w-none text-center py-20"><h1>{t.nav.about}</h1><p className="text-xl text-gray-500 leading-relaxed">{profile.bio}</p></div></PageWrapper>} />
+              <Route path="/about" element={<PageWrapper><About profile={profile} /></PageWrapper>} />
             </Routes>
           </AnimatePresence>
         )}
@@ -133,7 +134,7 @@ const App: React.FC = () => {
   const [profile, setProfile] = useState<Profile>({
     name: "新博主",
     bio: "极简云端博客已就绪。请前往设置页面配置 Token，数据将自动存储在专用的 data 分支。",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
+    avatar: "https://t.alcy.cc/tx",
     socials: {}
   });
 
@@ -153,6 +154,19 @@ const App: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
+
+  // 动态更新favicon
+  useEffect(() => {
+    if (profile.avatar) {
+      const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link');
+      link.type = 'image/x-icon';
+      link.rel = 'icon';
+      link.href = profile.avatar;
+      if (!document.querySelector("link[rel*='icon']")) {
+        document.head.appendChild(link);
+      }
+    }
+  }, [profile.avatar]);
 
   useEffect(() => {
     const hideLoader = () => {
@@ -311,7 +325,6 @@ const App: React.FC = () => {
 
   const handleDeletePost = async (id: string) => {
     if (!config?.token) return;
-    if (!confirm(t.post.deleteConfirm)) return;
 
     const loadId = toast.loading(t.common.syncing);
     const service = new GitHubService(config);
