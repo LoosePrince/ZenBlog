@@ -200,10 +200,10 @@ const About: React.FC<AboutProps> = ({ profile }) => {
       <motion.section 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative py-16 px-10 bg-gradient-to-br from-pink-50 to-blue-50 rounded-[3rem] shadow-lg border border-gray-100 overflow-hidden"
+        className="relative py-12 md:py-16 px-6 md:px-10 bg-gradient-to-br from-pink-50 to-blue-50 dark:from-pink-900/10 dark:to-blue-900/10 rounded-[3rem] shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden"
       >
-        <div className="absolute -top-20 -right-20 w-40 h-40 bg-yellow-300 rounded-full opacity-20"></div>
-        <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-blue-300 rounded-full opacity-20"></div>
+        <div className="absolute -top-20 -right-20 w-40 h-40 bg-yellow-300 dark:bg-yellow-600 rounded-full opacity-20 dark:opacity-10"></div>
+        <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-blue-300 dark:bg-blue-600 rounded-full opacity-20 dark:opacity-10"></div>
         
         <div className="relative flex flex-col md:flex-row items-center md:items-start space-y-8 md:space-y-0 md:space-x-8">
           <motion.div 
@@ -212,20 +212,20 @@ const About: React.FC<AboutProps> = ({ profile }) => {
             transition={{ duration: 0.5 }}
             className="relative flex-shrink-0"
           >
-            <div className="absolute inset-0 bg-indigo-200 rounded-full blur-2xl opacity-20 animate-pulse"></div>
+            <div className="absolute inset-0 bg-indigo-200 dark:bg-indigo-700 rounded-full blur-2xl opacity-20 dark:opacity-10 animate-pulse"></div>
             <img 
               src={profile.avatar} 
               alt={profile.name}
-              className="relative w-32 h-32 md:w-40 md:h-40 rounded-[2rem] border-4 border-white shadow-2xl object-cover transform rotate-3"
+              className="relative w-32 h-32 md:w-40 md:h-40 rounded-[2rem] border-4 border-white dark:border-gray-700 shadow-2xl object-cover transform rotate-3"
             />
           </motion.div>
           
           <div className="text-center md:text-left flex-1">
-            <h1 className="text-4xl md:text-5xl font-black text-gray-800 mb-3 tracking-tight">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-gray-800 dark:text-gray-100 mb-3 tracking-tight">
               {t.about?.welcome || '客官，里面请'} <span className="inline-block animate-bounce">~</span>
             </h1>
-            <h2 className="text-2xl md:text-3xl font-medium text-gray-500 mb-6">
-              {t.about?.iam || '我是'}<span className="text-pink-600">{profile.name}</span>
+            <h2 className="text-xl md:text-2xl lg:text-3xl font-medium text-gray-500 dark:text-gray-400 mb-6">
+              {t.about?.iam || '我是'}<span className="text-pink-600 dark:text-pink-400">{profile.name}</span>
             </h2>
             <div className="w-20 h-1 bg-gradient-to-r from-pink-500 to-blue-500 rounded-full mb-6 mx-auto md:mx-0"></div>
           </div>
@@ -237,20 +237,20 @@ const About: React.FC<AboutProps> = ({ profile }) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white rounded-[3rem] shadow-lg p-10 transform hover:scale-[1.01] transition-all duration-300"
+        className="bg-white dark:bg-gray-800 rounded-[3rem] shadow-lg p-6 md:p-10 transform hover:scale-[1.01] transition-all duration-300"
       >
-        <h2 className="text-3xl font-black text-gray-800 mb-6 flex items-center">
+        <h2 className="text-2xl md:text-3xl font-black text-gray-800 dark:text-gray-100 mb-6 flex items-center">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-blue-500">
             {t.about?.intro || '简介'}
           </span>
-          <div className="flex-grow h-px bg-gray-200 ml-4"></div>
+          <div className="flex-grow h-px bg-gray-200 dark:bg-gray-700 ml-4"></div>
         </h2>
 
-        <p className="text-lg text-gray-600 leading-relaxed mb-6">
+        <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed mb-6">
           {profile.bio || t.home.bioPlaceholder}
         </p>
         
-        <p className="text-lg text-gray-600 leading-relaxed mb-6">
+        <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed mb-6">
           {t.about?.intro_text1 || '我热爱任何有趣的事物，包括但不限于：'}
         </p>
         
@@ -263,12 +263,12 @@ const About: React.FC<AboutProps> = ({ profile }) => {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.2 + index * 0.05 }}
-                className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-2xl hover:shadow-md transition-all group"
+                className="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-700 rounded-2xl hover:shadow-md dark:hover:shadow-none dark:hover:bg-gray-600 transition-all group"
               >
-                <div className={`p-3 ${interest.bg} ${interest.color} rounded-xl mb-2 group-hover:scale-110 transition-transform`}>
+                <div className={`p-3 ${interest.bg} dark:opacity-80 ${interest.color} rounded-xl mb-2 group-hover:scale-110 transition-transform`}>
                   <Icon size={24} />
                 </div>
-                <span className="text-sm font-bold text-gray-700">{interest.label}</span>
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{interest.label}</span>
               </motion.div>
             );
           })}
@@ -280,13 +280,13 @@ const About: React.FC<AboutProps> = ({ profile }) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-white rounded-[3rem] shadow-lg p-10 transform hover:scale-[1.01] transition-all duration-300"
+        className="bg-white dark:bg-gray-800 rounded-[3rem] shadow-lg p-6 md:p-10 transform hover:scale-[1.01] transition-all duration-300"
       >
-        <h2 className="text-3xl font-black text-gray-800 mb-6 flex items-center">
+        <h2 className="text-2xl md:text-3xl font-black text-gray-800 dark:text-gray-100 mb-6 flex items-center">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-green-500">
             {t.about?.skills || '专业能力'}
           </span>
-          <div className="flex-grow h-px bg-gray-200 ml-4"></div>
+          <div className="flex-grow h-px bg-gray-200 dark:bg-gray-700 ml-4"></div>
         </h2>
 
         {/* 标签页头部 */}
@@ -296,7 +296,7 @@ const About: React.FC<AboutProps> = ({ profile }) => {
             className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
               activeSkillTab === 'design'
                 ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
             {t.about?.tab_design || '设计能力'}
@@ -306,7 +306,7 @@ const About: React.FC<AboutProps> = ({ profile }) => {
             className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
               activeSkillTab === 'programming'
                 ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
             {t.about?.tab_programming || '编程能力'}
@@ -316,7 +316,7 @@ const About: React.FC<AboutProps> = ({ profile }) => {
             className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
               activeSkillTab === 'other'
                 ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
             {t.about?.tab_other || '其他能力'}
@@ -333,10 +333,10 @@ const About: React.FC<AboutProps> = ({ profile }) => {
               transition={{ delay: index * 0.1 }}
             >
               <div className="flex justify-between mb-2">
-                <span className="text-base font-bold text-gray-700">{skill.name}</span>
-                <span className="text-sm font-bold text-gray-500">{skill.level}%</span>
+                <span className="text-base font-bold text-gray-700 dark:text-gray-300">{skill.name}</span>
+                <span className="text-sm font-bold text-gray-500 dark:text-gray-400">{skill.level}%</span>
               </div>
-              <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
+              <div className="w-full h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${skill.level}%` }}
@@ -344,13 +344,13 @@ const About: React.FC<AboutProps> = ({ profile }) => {
                   className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full"
                 ></motion.div>
               </div>
-              <p className="text-sm text-gray-500 mt-2">{skill.desc}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{skill.desc}</p>
             </motion.div>
           ))}
         </div>
 
         <div className="mt-6 text-center">
-          <p className="text-gray-500 italic">{t.about?.skills_quote || '技能是一个一个学的，经验是一点一点积累的'}</p>
+          <p className="text-gray-500 dark:text-gray-400 italic">{t.about?.skills_quote || '技能是一个一个学的，经验是一点一点积累的'}</p>
         </div>
       </motion.section>
 
@@ -360,17 +360,17 @@ const About: React.FC<AboutProps> = ({ profile }) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="bg-white rounded-[3rem] shadow-lg p-10 transform hover:scale-[1.01] transition-all duration-300"
+        className="bg-white dark:bg-gray-800 rounded-[3rem] shadow-lg p-6 md:p-10 transform hover:scale-[1.01] transition-all duration-300"
       >
-        <h2 className="text-3xl font-black text-gray-800 mb-4 flex items-center">
+        <h2 className="text-2xl md:text-3xl font-black text-gray-800 dark:text-gray-100 mb-4 flex items-center">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-green-500">
             {t.about?.works || '我的作品'}
           </span>
-          <div className="flex-grow h-px bg-gray-200 ml-4"></div>
+          <div className="flex-grow h-px bg-gray-200 dark:bg-gray-700 ml-4"></div>
         </h2>
         
         <div className="text-center mb-8">
-          <p className="text-gray-500 italic">{t.about?.works_quote || '作品是技能的体现，也是经验的积累'}</p>
+          <p className="text-gray-500 dark:text-gray-400 italic">{t.about?.works_quote || '作品是技能的体现，也是经验的积累'}</p>
         </div>
 
         <div className="space-y-6">
@@ -380,12 +380,12 @@ const About: React.FC<AboutProps> = ({ profile }) => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 + index * 0.1 }}
-              className="bg-gray-50 rounded-2xl p-6 hover:shadow-md transition-all"
+              className="bg-gray-50 dark:bg-gray-700 rounded-2xl p-6 hover:shadow-md dark:hover:shadow-none dark:hover:bg-gray-600 transition-all"
             >
               <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 mb-3">
                 {work.title}
               </h3>
-              <p className="text-gray-600 mb-4">{work.desc}</p>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">{work.desc}</p>
               <div className="flex flex-wrap gap-2">
                 {work.tags.map((tag, tagIndex) => (
                   <span
@@ -406,13 +406,13 @@ const About: React.FC<AboutProps> = ({ profile }) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="bg-white rounded-[3rem] shadow-lg p-10 transform hover:scale-[1.01] transition-all duration-300"
+        className="bg-white dark:bg-gray-800 rounded-[3rem] shadow-lg p-6 md:p-10 transform hover:scale-[1.01] transition-all duration-300"
       >
-        <h2 className="text-3xl font-black text-gray-800 mb-6 flex items-center">
+        <h2 className="text-2xl md:text-3xl font-black text-gray-800 dark:text-gray-100 mb-6 flex items-center">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-indigo-500">
             {t.about?.games || '喜欢玩的游戏'}
           </span>
-          <div className="flex-grow h-px bg-gray-200 ml-4"></div>
+          <div className="flex-grow h-px bg-gray-200 dark:bg-gray-700 ml-4"></div>
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -422,22 +422,22 @@ const About: React.FC<AboutProps> = ({ profile }) => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6 + index * 0.05 }}
-              className="group bg-gray-50 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 cursor-pointer"
+              className="group bg-gray-50 dark:bg-gray-700 rounded-2xl p-6 hover:shadow-xl dark:hover:shadow-none dark:hover:bg-gray-600 transition-all duration-300 cursor-pointer"
             >
               <div className="flex flex-col items-center text-center">
                 <div className="w-20 h-20 mb-4 rounded-2xl overflow-hidden shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <img src={game.icon} alt={game.name} className="w-full h-full object-cover" />
                 </div>
-                <h3 className="text-xl font-black text-gray-900 mb-2">{game.name}</h3>
-                <p className="text-sm text-gray-500 mb-3 leading-relaxed">{game.desc}</p>
-                <span className="text-xs text-gray-400 italic">"{game.quote}"</span>
+                <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-2">{game.name}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">{game.desc}</p>
+                <span className="text-xs text-gray-400 dark:text-gray-500 italic">"{game.quote}"</span>
               </div>
             </motion.div>
           ))}
         </div>
         
         <div className="mt-6 text-center">
-          <p className="text-gray-500 italic">{t.about?.games_quote || '如果你也对这些游戏感兴趣的话，欢迎来找我玩！'}</p>
+          <p className="text-gray-500 dark:text-gray-400 italic">{t.about?.games_quote || '如果你也对这些游戏感兴趣的话，欢迎来找我玩！'}</p>
         </div>
       </motion.section>
 
@@ -446,17 +446,17 @@ const About: React.FC<AboutProps> = ({ profile }) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="bg-white rounded-[3rem] shadow-lg p-10 transform hover:scale-[1.01] transition-all duration-300 overflow-hidden"
+        className="bg-white dark:bg-gray-800 rounded-[3rem] shadow-lg p-6 md:p-10 transform hover:scale-[1.01] transition-all duration-300 overflow-hidden"
       >
-        <h2 className="text-3xl font-black text-gray-800 mb-6 flex items-center">
+        <h2 className="text-2xl md:text-3xl font-black text-gray-800 dark:text-gray-100 mb-6 flex items-center">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-yellow-500">
             {t.about?.music || '我的音乐'}
           </span>
-          <div className="flex-grow h-px bg-gray-200 ml-4"></div>
+          <div className="flex-grow h-px bg-gray-200 dark:bg-gray-700 ml-4"></div>
         </h2>
         
         <div className="flex justify-center mb-6">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-lg border border-gray-100">
+          <div className="bg-white dark:bg-gray-700 rounded-2xl p-6 w-full max-w-md shadow-lg border border-gray-100 dark:border-gray-600">
             {/* 歌曲信息 */}
             <div className="flex items-center space-x-4 mb-6">
               <button
@@ -466,15 +466,15 @@ const About: React.FC<AboutProps> = ({ profile }) => {
                 {isPlaying ? <Pause size={24} fill="white" /> : <Play size={24} fill="white" className="ml-1" />}
               </button>
               <div className="flex-grow">
-                <div className="text-xl font-black text-gray-900">明天你好</div>
-                <div className="text-sm text-gray-500 font-medium">SER - 钢琴独奏版</div>
+                <div className="text-xl font-black text-gray-900 dark:text-gray-100">明天你好</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">SER - 钢琴独奏版</div>
               </div>
             </div>
             
             {/* 进度条 */}
             <div>
               <div 
-                className="relative h-2 bg-gray-200 rounded-full cursor-pointer group"
+                className="relative h-2 bg-gray-200 dark:bg-gray-600 rounded-full cursor-pointer group"
                 onClick={handleProgressClick}
               >
                 <div 
@@ -482,11 +482,11 @@ const About: React.FC<AboutProps> = ({ profile }) => {
                   style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
                 ></div>
                 <div 
-                  className="absolute w-4 h-4 bg-white rounded-full shadow-md top-1/2 transform -translate-y-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute w-4 h-4 bg-white dark:bg-gray-300 rounded-full shadow-md top-1/2 transform -translate-y-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
                   style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%` }}
                 ></div>
               </div>
-              <div className="flex justify-between mt-2 text-sm text-gray-500 font-medium">
+              <div className="flex justify-between mt-2 text-sm text-gray-500 dark:text-gray-400 font-medium">
                 <span>{formatTime(currentTime)}</span>
                 <span>{formatTime(duration)}</span>
               </div>
@@ -495,13 +495,13 @@ const About: React.FC<AboutProps> = ({ profile }) => {
         </div>
 
         <div className="max-w-2xl mx-auto text-center space-y-3">
-          <p className="text-gray-600 font-medium">
+          <p className="text-gray-600 dark:text-gray-300 font-medium">
             {t.about?.music_about || '有关《明天你好》这首歌'}
           </p>
-          <p className="text-gray-500 leading-relaxed">
+          <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
             {t.about?.music_story1 || '这首歌是我在5年级的时候听的，当时我还在上小学，这首歌的旋律和歌词在那时让我产生了一种很奇妙的感觉'}
           </p>
-          <p className="text-gray-500 leading-relaxed">
+          <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
             {t.about?.music_story2 || '那种感觉我到现在也无法忘却，因为网易云没有我喜欢的版本，所以在此推荐的是钢琴的纯音乐版。'}
           </p>
         </div>
@@ -512,13 +512,13 @@ const About: React.FC<AboutProps> = ({ profile }) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
-        className="bg-white rounded-[3rem] shadow-lg p-10"
+        className="bg-white dark:bg-gray-800 rounded-[3rem] shadow-lg p-6 md:p-10"
       >
-        <h2 className="text-3xl font-black text-gray-800 mb-6 flex items-center">
+        <h2 className="text-2xl md:text-3xl font-black text-gray-800 dark:text-gray-100 mb-6 flex items-center">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-blue-500">
             {t.about?.contact || '联系方式'}
           </span>
-          <div className="flex-grow h-px bg-gray-200 ml-4"></div>
+          <div className="flex-grow h-px bg-gray-200 dark:bg-gray-700 ml-4"></div>
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -530,23 +530,23 @@ const About: React.FC<AboutProps> = ({ profile }) => {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.6 + index * 0.05 }}
-                className="flex items-center justify-between bg-gray-50 rounded-2xl p-6 hover:shadow-md transition-all group"
+                className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-2xl p-6 hover:shadow-md dark:hover:shadow-none dark:hover:bg-gray-600 transition-all group"
               >
                 <div className="flex items-center space-x-4">
                   <Icon size={28} className={contact.color} />
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">{contact.label}</h3>
-                    <p className="text-gray-600">{contact.value}</p>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{contact.label}</h3>
+                    <p className="text-gray-600 dark:text-gray-300">{contact.value}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleCopy(contact.value)}
-                  className="p-2 bg-white rounded-xl hover:bg-indigo-50 transition-all"
+                  className="p-2 bg-white dark:bg-gray-600 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all"
                 >
                   {copiedText === contact.value ? (
-                    <Check size={20} className="text-green-500" />
+                    <Check size={20} className="text-green-500 dark:text-green-400" />
                   ) : (
-                    <Copy size={20} className="text-gray-400" />
+                    <Copy size={20} className="text-gray-400 dark:text-gray-500" />
                   )}
                 </button>
               </motion.div>
@@ -554,7 +554,7 @@ const About: React.FC<AboutProps> = ({ profile }) => {
           })}
         </div>
         <div className="text-center">
-          <p className="text-gray-500 italic">{t.about?.contact_note || '如果没有什么事的话，请勿打扰哦~'}</p>
+          <p className="text-gray-500 dark:text-gray-400 italic">{t.about?.contact_note || '如果没有什么事的话，请勿打扰哦~'}</p>
         </div>
       </motion.section>
 

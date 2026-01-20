@@ -9,6 +9,8 @@ export const translations = {
       settings: '设置',
       adminLogin: '管理登入',
       adminUser: '管理员',
+      navigation: '导航',
+      admin: '管理',
     },
     home: {
       available: '欢迎交流',
@@ -155,6 +157,11 @@ export const translations = {
       syncing: '同步中',
       cancel: '取消',
       delete: '删除',
+    },
+    theme: {
+      light: '浅色',
+      dark: '深色',
+      auto: '自动',
     }
   },
   en: {
@@ -165,6 +172,8 @@ export const translations = {
       settings: 'Settings',
       adminLogin: 'Admin Login',
       adminUser: 'Admin',
+      navigation: 'Navigation',
+      admin: 'Admin',
     },
     home: {
       available: 'Available for collab',
@@ -311,6 +320,11 @@ export const translations = {
       syncing: 'Syncing',
       cancel: 'Cancel',
       delete: 'Delete',
+    },
+    theme: {
+      light: 'Light',
+      dark: 'Dark',
+      auto: 'Auto',
     }
   }
 };

@@ -12,17 +12,32 @@ import { Post, Profile, GitHubConfig, PublicConfig, FileChange } from './types';
 import { GitHubService } from './services/githubService';
 import { translations, Language } from './services/i18n';
 
+export type Theme = 'light' | 'dark' | 'auto';
+
 interface LanguageContextType {
   language: Language;
   t: any;
   setLanguage: (lang: Language) => void;
 }
 
+interface ThemeContextType {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  effectiveTheme: 'light' | 'dark';
+}
+
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
   if (!context) throw new Error('useLanguage must be used within LanguageProvider');
+  return context;
+};
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) throw new Error('useTheme must be used within ThemeProvider');
   return context;
 };
 
@@ -58,7 +73,7 @@ const AppContent: React.FC<{
   const { t } = useLanguage();
 
   return (
-    <div className="min-h-screen bg-[#f9fafb] text-gray-900 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-[#f9fafb] dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans selection:bg-indigo-100 selection:text-indigo-900 dark:selection:bg-indigo-900 dark:selection:text-indigo-100 transition-colors duration-300">
       <Toaster position="top-center" reverseOrder={false} />
       <Navbar isAdmin={isAdmin} onToggleAdmin={onToggleAdmin} profile={profile} />
       
@@ -106,10 +121,10 @@ const AppContent: React.FC<{
         )}
       </main>
 
-      <footer className="py-16 border-t border-gray-100 mt-20">
+      <footer className="py-16 border-t border-gray-100 dark:border-gray-800 mt-20">
         <div className="max-w-5xl mx-auto px-4 text-center">
-          <p className="text-gray-400 text-sm">© {new Date().getFullYear()} {profile.name}.</p>
-          <p className="text-gray-300 text-[10px] mt-2 tracking-widest uppercase">Powered by ZenBlog & GitHub API</p>
+          <p className="text-gray-400 dark:text-gray-500 text-sm">© {new Date().getFullYear()} {profile.name}.</p>
+          <p className="text-gray-300 dark:text-gray-600 text-[10px] mt-2 tracking-widest uppercase">Powered by ZenBlog & GitHub API</p>
         </div>
       </footer>
     </div>
@@ -123,10 +138,56 @@ const App: React.FC = () => {
     return (saved as Language) || 'zh';
   });
 
+  const [theme, setThemeState] = useState<Theme>(() => {
+    const saved = localStorage.getItem('zenblog_theme');
+    return (saved as Theme) || 'auto';
+  });
+
+  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light');
+
   const setLanguage = (lang: Language) => {
     localStorage.setItem('zenblog_lang', lang);
     setLanguageState(lang);
   };
+
+  const setTheme = (newTheme: Theme) => {
+    localStorage.setItem('zenblog_theme', newTheme);
+    setThemeState(newTheme);
+  };
+
+  // 监听系统主题变化和主题设置
+  useEffect(() => {
+    const updateTheme = () => {
+      let isDark = false;
+      
+      if (theme === 'dark') {
+        isDark = true;
+      } else if (theme === 'auto') {
+        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      
+      setEffectiveTheme(isDark ? 'dark' : 'light');
+      
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+
+    updateTheme();
+
+    // 监听系统主题变化
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      if (theme === 'auto') {
+        updateTheme();
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [theme]);
 
   const t = translations[language];
 
@@ -350,24 +411,26 @@ const App: React.FC = () => {
   };
 
   return (
-    <LanguageContext.Provider value={{ language, t, setLanguage }}>
-      <Router>
-        <AppContent 
-          isAdmin={isAdmin}
-          onToggleAdmin={() => setIsAdmin(!isAdmin)}
-          posts={posts}
-          profile={profile}
-          config={config}
-          loading={loading}
-          initError={initError}
-          handleSaveConfig={handleSaveConfig}
-          handleSaveProfile={handleSaveProfile}
-          handleSaveConfigAndProfile={handleSaveConfigAndProfile}
-          handleSavePost={handleSavePost}
-          handleDeletePost={handleDeletePost}
-        />
-      </Router>
-    </LanguageContext.Provider>
+    <ThemeContext.Provider value={{ theme, setTheme, effectiveTheme }}>
+      <LanguageContext.Provider value={{ language, t, setLanguage }}>
+        <Router>
+          <AppContent 
+            isAdmin={isAdmin}
+            onToggleAdmin={() => setIsAdmin(!isAdmin)}
+            posts={posts}
+            profile={profile}
+            config={config}
+            loading={loading}
+            initError={initError}
+            handleSaveConfig={handleSaveConfig}
+            handleSaveProfile={handleSaveProfile}
+            handleSaveConfigAndProfile={handleSaveConfigAndProfile}
+            handleSavePost={handleSavePost}
+            handleDeletePost={handleDeletePost}
+          />
+        </Router>
+      </LanguageContext.Provider>
+    </ThemeContext.Provider>
   );
 };
 

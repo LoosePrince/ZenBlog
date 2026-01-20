@@ -6,6 +6,11 @@
     <link rel="icon" type="image/svg+xml" href="https://t.alcy.cc/tx" />
     <title>ZenBlog - Modern Personal Blog</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -28,6 +33,10 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
         ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; border: 3px solid transparent; background-clip: content-box; }
+        
+        /* Dark mode scrollbar */
+        .dark ::-webkit-scrollbar-thumb { background: #374151; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
     </style>
 </head>
 <body>
