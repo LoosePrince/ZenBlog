@@ -91,15 +91,13 @@ const Navbar: React.FC<NavbarProps> = ({ isAdmin, onToggleAdmin, profile }) => {
           </div>
 
           <div className="flex items-center space-x-3">
-            {/* 移动端菜单按钮（仅在管理员模式下显示） */}
-            {isAdmin && (
-              <button
-                onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="md:hidden p-2 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all active:scale-95"
-              >
-                {showMobileMenu ? <X size={20} /> : <Menu size={20} />}
-              </button>
-            )}
+            {/* 移动端菜单按钮 */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="md:hidden p-2 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all active:scale-95"
+            >
+              {showMobileMenu ? <X size={20} /> : <Menu size={20} />}
+            </button>
 
             {/* 主题切换 */}
             <div className="relative" ref={themeMenuRef}>
@@ -191,7 +189,7 @@ const Navbar: React.FC<NavbarProps> = ({ isAdmin, onToggleAdmin, profile }) => {
 
         {/* 移动端下拉菜单 */}
         <AnimatePresence>
-          {isAdmin && showMobileMenu && (
+          {showMobileMenu && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -222,27 +220,29 @@ const Navbar: React.FC<NavbarProps> = ({ isAdmin, onToggleAdmin, profile }) => {
                   ))}
                 </div>
 
-                {/* 管理员菜单项 */}
-                <div className="px-2 pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-3 mb-2">
-                    {t.nav.admin || '管理'}
-                  </p>
-                  {adminItems.map((item) => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setShowMobileMenu(false)}
-                      className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all ${
-                        location.pathname === item.path
-                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                      }`}
-                    >
-                      <item.icon size={18} />
-                      <span className="font-semibold text-sm">{item.label}</span>
-                    </Link>
-                  ))}
-                </div>
+                {/* 管理员菜单项（仅在管理员模式下显示） */}
+                {isAdmin && (
+                  <div className="px-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+                    <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-3 mb-2">
+                      {t.nav.admin || '管理'}
+                    </p>
+                    {adminItems.map((item) => (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setShowMobileMenu(false)}
+                        className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all ${
+                          location.pathname === item.path
+                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        }`}
+                      >
+                        <item.icon size={18} />
+                        <span className="font-semibold text-sm">{item.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             </motion.div>
           )}

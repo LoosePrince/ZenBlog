@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Save, ArrowLeft, Loader2, Eye, FileText, Tag, Calendar, Sparkles, X, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import { Post, GitHubConfig } from '../types';
 import { GitHubService } from '../services/githubService';
-import { useLanguage } from '../App';
+import { useLanguage, useTheme } from '../App';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -20,7 +20,9 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { effectiveTheme } = useTheme();
   const isNew = id === 'new';
+  const isDark = effectiveTheme === 'dark';
   
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
@@ -202,19 +204,37 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
             </div>
           ) : (
             <div className="markdown-content">
-              <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-6">
+              <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-gray-900 dark:text-gray-100 mb-6">
                 {title || t.editor.titlePlaceholder}
               </h1>
-              <div className="h-[1px] bg-gray-100 mb-6"></div>
-              <div style={{ fontSize: '1rem', lineHeight: '1.75', color: '#4b5563' }}>
+              <div className="h-[1px] bg-gray-100 dark:bg-gray-700 mb-6"></div>
+              <div className="text-gray-700 dark:text-gray-300" style={{ fontSize: '1rem', lineHeight: '1.75' }}>
                 <ReactMarkdown 
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    h1: ({node, ...props}) => <h1 style={{ fontSize: '1.875rem', fontWeight: '900', color: '#111827', marginTop: '2rem', marginBottom: '1rem', lineHeight: '1.2' }} {...props} />,
-                    h2: ({node, ...props}) => <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827', marginTop: '1.5rem', marginBottom: '0.75rem', lineHeight: '1.3' }} {...props} />,
-                    h3: ({node, ...props}) => <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginTop: '1.25rem', marginBottom: '0.5rem', lineHeight: '1.4' }} {...props} />,
-                    p: ({node, ...props}) => <p style={{ marginBottom: '1rem', lineHeight: '1.75' }} {...props} />,
-                    img: ({node, ...props}) => <img style={{ borderRadius: '1rem', maxWidth: '100%', marginTop: '1rem', marginBottom: '1rem' }} {...props} />,
+                    h1: ({node, ...props}) => <h1 style={{ fontSize: '1.875rem', fontWeight: '900', color: isDark ? '#f3f4f6' : '#111827', marginTop: '2rem', marginBottom: '1rem', lineHeight: '1.2' }} {...props} />,
+                    h2: ({node, ...props}) => <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: isDark ? '#f3f4f6' : '#111827', marginTop: '1.5rem', marginBottom: '0.75rem', lineHeight: '1.3' }} {...props} />,
+                    h3: ({node, ...props}) => <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: isDark ? '#e5e7eb' : '#111827', marginTop: '1.25rem', marginBottom: '0.5rem', lineHeight: '1.4' }} {...props} />,
+                    p: ({node, ...props}) => <p style={{ marginBottom: '1rem', lineHeight: '1.75', color: isDark ? '#d1d5db' : '#374151' }} {...props} />,
+                    ul: ({node, ...props}) => <ul style={{ marginBottom: '1rem', paddingLeft: '1.5rem', listStyleType: 'disc' }} {...props} />,
+                    ol: ({node, ...props}) => <ol style={{ marginBottom: '1rem', paddingLeft: '1.5rem', listStyleType: 'decimal' }} {...props} />,
+                    li: ({node, ...props}) => <li style={{ marginBottom: '0.5rem' }} {...props} />,
+                    blockquote: ({node, ...props}) => <blockquote style={{ borderLeft: `4px solid ${isDark ? '#818cf8' : '#6366f1'}`, paddingLeft: '1rem', fontStyle: 'italic', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '1rem' }} {...props} />,
+                    code: ({node, className, children, ...props}) => {
+                      const isInline = !className;
+                      return isInline ? (
+                        <code style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6', color: isDark ? '#e5e7eb' : '#1f2937', padding: '0.125rem 0.375rem', borderRadius: '0.25rem', fontSize: '0.875em', fontFamily: 'monospace' }} {...props}>{children}</code>
+                      ) : (
+                        <code style={{ display: 'block', backgroundColor: isDark ? '#1f2937' : '#f8fafc', color: isDark ? '#e5e7eb' : '#334155', padding: '1rem', borderRadius: '0.5rem', overflow: 'auto', fontSize: '0.875rem', fontFamily: 'monospace', marginBottom: '1rem', border: `1px solid ${isDark ? '#374151' : '#e2e8f0'}` }} {...props}>{children}</code>
+                      );
+                    },
+                    pre: ({node, ...props}) => <pre style={{ marginBottom: '1rem' }} {...props} />,
+                    a: ({node, ...props}) => <a style={{ color: isDark ? '#818cf8' : '#6366f1', textDecoration: 'underline', fontWeight: '500' }} {...props} />,
+                    img: ({node, ...props}) => <img style={{ borderRadius: '0.75rem', boxShadow: isDark ? '0 10px 15px -3px rgba(0, 0, 0, 0.3)' : '0 10px 15px -3px rgba(0, 0, 0, 0.1)', marginTop: '1rem', marginBottom: '1rem', maxWidth: '100%' }} {...props} />,
+                    table: ({node, ...props}) => <div style={{ overflowX: 'auto', marginBottom: '1rem' }}><table style={{ width: '100%', borderCollapse: 'collapse' }} {...props} /></div>,
+                    th: ({node, ...props}) => <th style={{ border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`, padding: '0.5rem', backgroundColor: isDark ? '#1f2937' : '#f9fafb', fontWeight: '600', textAlign: 'left' }} {...props} />,
+                    td: ({node, ...props}) => <td style={{ border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`, padding: '0.5rem' }} {...props} />,
+                    hr: ({node, ...props}) => <hr style={{ border: 'none', borderTop: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`, marginTop: '1.5rem', marginBottom: '1.5rem' }} {...props} />,
                   }}
                 >
                   {content || t.editor.contentPlaceholder}
@@ -233,15 +253,17 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
         >
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="w-full bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            className="w-full bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
                 <Settings size={18} />
               </div>
-              <span className="font-bold text-gray-900">{t.editor.properties}</span>
+              <span className="font-bold text-gray-900 dark:text-gray-100">{t.editor.properties}</span>
             </div>
-            {showSettings ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            <div className="text-gray-600 dark:text-gray-400">
+              {showSettings ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
           </button>
 
           <AnimatePresence>

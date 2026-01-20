@@ -163,44 +163,44 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
             {post.title}
           </h1>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-8 md:pb-10 border-b border-gray-100 dark:border-gray-800">
-            <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-between gap-3 md:gap-4 pb-8 md:pb-10 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center space-x-3 md:space-x-4 min-w-0 flex-1">
               <img 
                 src={author?.avatar || profile.avatar} 
                 alt={author?.name || profile.name}
-                className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-100 dark:border-gray-700" 
+                className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-100 dark:border-gray-700 flex-shrink-0" 
               />
-              <div>
-                <p className="text-sm font-black text-gray-900 dark:text-gray-100">{author?.name || profile.name}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-tight">
+              <div className="min-w-0">
+                <p className="text-sm font-black text-gray-900 dark:text-gray-100 truncate">{author?.name || profile.name}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-tight truncate">
                   {author?.username ? `@${author.username}` : t.post.adminMember}
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3 w-full sm:w-auto">
+            <div className="flex items-center space-x-2 md:space-x-3 flex-shrink-0">
               {isAdmin && (
                 <>
                   <Link 
                     to={`/edit/${post.id}`}
-                    className="p-2.5 bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all transform hover:scale-105"
+                    className="p-2 md:p-2.5 bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all transform hover:scale-105"
                   >
-                    <Edit3 size={20} />
+                    <Edit3 size={18} className="md:w-5 md:h-5" />
                   </Link>
                   <button 
                     onClick={handleDeleteClick}
-                    className="p-2.5 bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-all transform hover:scale-105"
+                    className="p-2 md:p-2.5 bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-all transform hover:scale-105"
                   >
-                    <Trash2 size={20} />
+                    <Trash2 size={18} className="md:w-5 md:h-5" />
                   </button>
                 </>
               )}
               <button 
                 onClick={handleShare}
-                className="p-2.5 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all transform hover:scale-105 flex-1 sm:flex-none"
+                className="p-2 md:p-2.5 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all transform hover:scale-105"
                 title={t.post?.share || '分享文章'}
               >
-                <Share2 size={20} />
+                <Share2 size={18} className="md:w-5 md:h-5" />
               </button>
             </div>
           </div>
