@@ -80,7 +80,7 @@ export class GitHubService {
         })
       });
     } catch (err: any) {
-      // 如果分支不存在，尝试从 main 创建分支（仅针对初始化）
+      // 如果分支不存在，尝试创建孤儿分支（仅针对初始化）
       if (err.message.includes('Not Found') && branchName === 'data') {
         await this.createDataBranch();
         return this.commitMultipleFiles(message, changes); // 重试
@@ -90,12 +90,34 @@ export class GitHubService {
   }
 
   private async createDataBranch(): Promise<void> {
-    const mainRef = await this.request(`git/ref/heads/main`);
+    // 1. 创建一个包含占位文件的 Tree (创建孤儿分支)
+    const treeData = await this.request(`git/trees`, {
+      method: 'POST',
+      body: JSON.stringify({
+        tree: [{
+          path: '.gitkeep',
+          mode: '100644',
+          type: 'blob',
+          content: 'ZenBlog Data Branch'
+        }]
+      })
+    });
+
+    // 2. 创建一个没有任何父节点的根 Commit
+    const commitData = await this.request(`git/commits`, {
+      method: 'POST',
+      body: JSON.stringify({
+        message: 'Initialize data branch',
+        tree: treeData.sha
+      })
+    });
+
+    // 3. 创建分支引用
     await this.request(`git/refs`, {
       method: 'POST',
       body: JSON.stringify({
         ref: 'refs/heads/data',
-        sha: mainRef.object.sha
+        sha: commitData.sha
       })
     });
   }
