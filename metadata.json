@@ -1,0 +1,5 @@
+{
+  "name": "ZenBlog - 云端管理个人博客",
+  "description": "一个基于 GitHub API 驱动的现代化个人博客系统，支持前端直接编辑、AI 辅助写作及全自动 GitHub 提交存储。",
+  "requestFramePermissions": []
+}
