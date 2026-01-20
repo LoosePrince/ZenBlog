@@ -1,9 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, ArrowLeft, Loader2, Edit, Trash2 } from 'lucide-react';
+import { Calendar, ArrowLeft, Loader2, Edit3, Trash2, Clock, Share2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Post, GitHubConfig } from '../types.ts';
 import { GitHubService } from '../services/githubService.ts';
+import { motion } from 'framer-motion';
+import { useLanguage } from '../App';
 
 interface PostDetailProps {
   posts: Post[];
@@ -15,6 +18,7 @@ interface PostDetailProps {
 const PostDetail: React.FC<PostDetailProps> = ({ posts, config, isAdmin, onDelete }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [content, setContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,8 +26,9 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, isAdmin, onDelet
   const post = posts.find((p) => p.id === id);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     if (!post || !config) {
-      if (!post && !loading) setError('文章未找到');
+      if (!post && !loading) setError(t.post.notFound);
       setLoading(false);
       return;
     }
@@ -34,98 +39,133 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, isAdmin, onDelet
         const { content } = await service.getFile(post.contentPath);
         setContent(content);
       } catch (err: any) {
-        setError(err.message || '获取内容失败');
+        setError(err.message || t.post.loadError);
       } finally {
         setLoading(false);
       }
     };
 
     fetchContent();
-  }, [id, post, config]);
+  }, [id, post, config, t]);
 
   const handleDelete = async () => {
-    if (id && window.confirm('确定要删除这篇文章吗？')) {
-      try {
-        await onDelete(id);
-        navigate('/');
-      } catch (err: any) {
-        alert('删除失败: ' + err.message);
-      }
+    if (id) {
+      await onDelete(id);
+      navigate('/');
     }
   };
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-32">
-        <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
-        <p className="text-gray-500">正在获取内容...</p>
+      <div className="flex flex-col items-center justify-center py-48">
+        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-6"></div>
+        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">{t.post.fetchingStory}</p>
       </div>
     );
   }
 
   if (error || !post) {
     return (
-      <div className="text-center py-20">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">{error}</h2>
-        <Link to="/" className="text-blue-600 flex items-center justify-center">
-          <ArrowLeft size={16} className="mr-2" /> 返回首页
+      <div className="text-center py-32 bg-white rounded-[3rem] shadow-sm border border-gray-100 max-w-2xl mx-auto">
+        <h2 className="text-3xl font-black text-gray-900 mb-6">{error || t.post.error404}</h2>
+        <Link to="/" className="inline-flex items-center text-indigo-600 font-black uppercase tracking-widest text-sm hover:opacity-70 transition-opacity">
+          <ArrowLeft size={16} className="mr-2" /> {t.post.backHome}
         </Link>
       </div>
     );
   }
 
-  return (
-    <article className="max-w-3xl mx-auto py-8">
-      <Link to="/" className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 mb-8 transition-colors">
-        <ArrowLeft size={16} className="mr-2" /> 返回首页
-      </Link>
+  const readingTime = Math.ceil(content.length / 500) || 1;
 
-      <header className="mb-10 text-center">
-        <div className="flex justify-center items-center space-x-2 mb-4">
-          <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full uppercase tracking-wider">
-            {post.category}
-          </span>
-          <span className="text-gray-300">•</span>
-          <div className="flex items-center text-gray-400 text-sm">
-            <Calendar size={14} className="mr-1" />
-            {new Date(post.date).toLocaleDateString('zh-CN')}
+  return (
+    <article className="max-w-4xl mx-auto">
+      <div className="mb-12">
+        <Link to="/" className="group inline-flex items-center text-sm font-black text-gray-400 hover:text-indigo-600 uppercase tracking-widest transition-colors">
+          <ArrowLeft size={16} className="mr-2 group-hover:-translate-x-1 transition-transform" /> {t.post.back}
+        </Link>
+      </div>
+
+      <header className="mb-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center space-x-3 mb-6">
+            <span className="px-4 py-1.5 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-full uppercase tracking-widest">
+              {post.category}
+            </span>
+            <div className="h-1 w-1 rounded-full bg-gray-200"></div>
+            <div className="flex items-center text-gray-400 text-xs font-bold uppercase tracking-tight">
+              <Calendar size={14} className="mr-1.5" />
+              {new Date(post.date).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+            <div className="h-1 w-1 rounded-full bg-gray-200"></div>
+            <div className="flex items-center text-gray-400 text-xs font-bold uppercase tracking-tight">
+              <Clock size={14} className="mr-1.5" />
+              {readingTime} {t.post.minRead}
+            </div>
           </div>
-        </div>
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-6 leading-tight">
-          {post.title}
-        </h1>
-        
-        {isAdmin && (
-          <div className="flex justify-center space-x-4">
-            <Link 
-              to={`/edit/${post.id}`}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-            >
-              <Edit size={16} className="mr-2" /> 编辑文章
-            </Link>
-            <button 
-              onClick={handleDelete}
-              className="inline-flex items-center px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
-            >
-              <Trash2 size={16} className="mr-2" /> 删除
-            </button>
+          
+          <h1 className="text-5xl md:text-6xl font-black text-gray-900 mb-10 leading-[1.1] tracking-tight">
+            {post.title}
+          </h1>
+
+          <div className="flex items-center justify-between pb-10 border-b border-gray-100">
+            <div className="flex items-center space-x-4">
+              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" className="w-10 h-10 rounded-full bg-gray-100" />
+              <div>
+                <p className="text-sm font-black text-gray-900">{t.post.author}</p>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-tight">{t.post.adminMember}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              {isAdmin && (
+                <>
+                  <Link 
+                    to={`/edit/${post.id}`}
+                    className="p-2.5 bg-gray-50 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all transform hover:scale-105"
+                  >
+                    <Edit3 size={20} />
+                  </Link>
+                  <button 
+                    onClick={handleDelete}
+                    className="p-2.5 bg-gray-50 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all transform hover:scale-105"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </>
+              )}
+              <button className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-100 hover:shadow-indigo-200 transition-all transform hover:scale-105">
+                <Share2 size={20} />
+              </button>
+            </div>
           </div>
-        )}
+        </motion.div>
       </header>
 
-      <div className="prose prose-blue max-w-none markdown-content">
-        {content ? (
-          content.split('\n').map((line, i) => {
-            if (line.startsWith('# ')) return <h1 key={i}>{line.substring(2)}</h1>;
-            if (line.startsWith('## ')) return <h2 key={i}>{line.substring(3)}</h2>;
-            if (line.startsWith('> ')) return <blockquote key={i}>{line.substring(2)}</blockquote>;
-            if (line.trim() === '') return <br key={i} />;
-            return <p key={i}>{line}</p>;
-          })
-        ) : (
-          <p className="text-gray-400 italic">内容加载中...</p>
-        )}
-      </div>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="prose prose-indigo prose-lg max-w-none prose-headings:font-black prose-headings:tracking-tight prose-p:text-gray-600 prose-p:leading-relaxed prose-img:rounded-[2rem] prose-img:shadow-2xl"
+      >
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {content}
+        </ReactMarkdown>
+      </motion.div>
+
+      <footer className="mt-20 pt-10 border-t border-gray-100">
+        <div className="bg-gray-50 rounded-[2.5rem] p-10 flex flex-col md:flex-row items-center justify-between">
+          <div>
+            <h4 className="text-xl font-black text-gray-900 mb-2 italic">{t.post.enjoyed}</h4>
+            <p className="text-gray-400 font-medium">{t.post.follow}</p>
+          </div>
+          <Link to="/" className="mt-6 md:mt-0 px-8 py-4 bg-white text-indigo-600 rounded-[1.5rem] font-black shadow-sm hover:shadow-md transition-all active:scale-95 tracking-widest uppercase text-xs">
+            {t.post.allPosts}
+          </Link>
+        </div>
+      </footer>
     </article>
   );
 };

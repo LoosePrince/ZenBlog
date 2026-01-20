@@ -1,20 +1,33 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# ZenBlog - Modern Git-Powered Blog
 
-# Run and deploy your AI Studio app
+A sleek, modern personal blog system driven by the GitHub API. ZenBlog uses a "Storage-Compute Separation" architecture, where your code lives on the `main` branch and your content is stored in a clean, isolated `data` branch.
 
-This contains everything you need to run your app locally.
+## Key Features
 
-View your app in AI Studio: https://ai.studio/apps/drive/1Zofj5DDspmCSSiqmD7ZaPmPKK4BTnsgp
+- **Isolated Storage**: Data is committed to a dedicated `data` branch, keeping your `main` branch clean.
+- **Atomic Commits**: Content and index updates are merged into a single Git commit for integrity.
+- **Markdown First**: High-quality post rendering with support for GFM.
+- **Modern UI**: Built with React, Tailwind CSS, Framer Motion, and Lucide Icons.
+- **Zero Backend**: Fully serverless, powered entirely by the GitHub Git API.
 
-## Run Locally
+## Getting Started
 
-**Prerequisites:**  Node.js
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
 
+2. **Run Locally**:
+   ```bash
+   npm run dev
+   ```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+3. **Configure**:
+   Go to the **Settings** page in the app, provide your GitHub Personal Access Token (PAT), and configure your repository details.
+
+4. **Deploy**:
+   Simply push your code to GitHub and enable GitHub Pages on the `main` branch (using the provided GitHub Action).
+
+## License
+
+MIT

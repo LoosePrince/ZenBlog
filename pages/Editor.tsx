@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, ArrowLeft, Wand2, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Image as ImageIcon } from 'lucide-react';
 import { Post, GitHubConfig } from '../types.ts';
 import { GitHubService } from '../services/githubService.ts';
-import { generateBlogHelper } from '../services/geminiService.ts';
+import { useLanguage } from '../App';
 
 interface EditorProps {
   posts: Post[];
@@ -15,15 +15,15 @@ interface EditorProps {
 const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const isNew = id === 'new';
   
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
-  const [category, setCategory] = useState('生活');
+  const [category, setCategory] = useState(t.editor.categories.life);
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!isNew);
-  const [aiWorking, setAiWorking] = useState(false);
 
   useEffect(() => {
     if (isNew) return;
@@ -44,7 +44,7 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
         const { content } = await service.getFile(post.contentPath);
         setContent(content);
       } catch (err: any) {
-        alert('加载失败: ' + err.message);
+        alert(t.editor.loadError + ': ' + err.message);
       } finally {
         setLoading(false);
       }
@@ -55,7 +55,7 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
 
   const handleSave = async () => {
     if (!title || !content) {
-      alert('标题和内容不能为空');
+      alert(t.editor.emptyFields);
       return;
     }
 
@@ -71,32 +71,17 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
       await onSave(postData, content);
       navigate('/');
     } catch (err: any) {
-      alert('保存失败: ' + err.message);
+      alert(t.editor.saveFailed + ': ' + err.message);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleAiAssist = async (task: 'summary' | 'title' | 'proofread') => {
-    if (!content && task !== 'title') {
-      alert('请先输入内容');
-      return;
-    }
-    setAiWorking(true);
-    const result = await generateBlogHelper(content || title, task);
-    setAiWorking(false);
-    
-    if (task === 'summary') setExcerpt(result);
-    else {
-      alert('AI 建议:\n\n' + result);
     }
   };
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32">
-        <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
-        <p className="text-gray-500">正在准备编辑器...</p>
+        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
+        <p className="text-gray-500">{t.editor.preparing}</p>
       </div>
     );
   }
@@ -106,26 +91,18 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
       <div className="flex items-center justify-between mb-8">
         <button 
           onClick={() => navigate(-1)} 
-          className="inline-flex items-center text-gray-500 hover:text-gray-900"
+          className="inline-flex items-center text-gray-500 hover:text-gray-900 transition-colors"
         >
-          <ArrowLeft size={18} className="mr-2" /> 取消
+          <ArrowLeft size={18} className="mr-2" /> {t.editor.cancel}
         </button>
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => handleAiAssist('summary')}
-            disabled={aiWorking}
-            className="flex items-center px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 disabled:opacity-50"
-          >
-            {aiWorking ? <Loader2 size={16} className="animate-spin mr-2" /> : <Wand2 size={16} className="mr-2" />}
-            AI 摘要
-          </button>
-          <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-50"
+            className="flex items-center px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 disabled:opacity-50 transition-all active:scale-95"
           >
             {saving ? <Loader2 size={18} className="animate-spin mr-2" /> : <Save size={18} className="mr-2" />}
-            {isNew ? '发布文章' : '保存修改'}
+            {isNew ? t.editor.publish : t.editor.save}
           </button>
         </div>
       </div>
@@ -136,40 +113,41 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="输入文章标题..."
+            placeholder={t.editor.titlePlaceholder}
             className="w-full text-4xl font-extrabold text-gray-900 border-none focus:ring-0 bg-transparent placeholder-gray-300"
           />
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="从这里开始创作 (支持 Markdown)..."
+            placeholder={t.editor.contentPlaceholder}
             className="w-full h-[600px] p-0 text-lg leading-relaxed text-gray-700 border-none focus:ring-0 bg-transparent resize-none placeholder-gray-300"
           />
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-            <h3 className="font-bold text-gray-900 border-b pb-2">文章属性</h3>
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-4">
+            <h3 className="font-bold text-gray-900 border-b border-gray-50 pb-2">{t.editor.properties}</h3>
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">文章分类</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t.editor.category}</label>
               <select 
                 value={category} 
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
               >
-                <option>生活</option>
-                <option>技术</option>
-                <option>随笔</option>
-                <option>教程</option>
+                <option>{t.editor.categories.life}</option>
+                <option>{t.editor.categories.tech}</option>
+                <option>{t.editor.categories.essay}</option>
+                <option>{t.editor.categories.tutorial}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">文章摘要</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">{t.editor.excerpt}</label>
               <textarea
                 value={excerpt}
                 onChange={(e) => setExcerpt(e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                rows={6}
+                placeholder={t.editor.excerptHint}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm resize-none transition-all"
               />
             </div>
           </div>

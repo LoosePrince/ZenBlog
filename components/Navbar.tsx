@@ -1,7 +1,8 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Settings, PlusSquare, Home, User, Edit3 } from 'lucide-react';
+import { Settings, PlusSquare, Home, User, ShieldCheck, Languages } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useLanguage } from '../App';
 
 interface NavbarProps {
   isAdmin: boolean;
@@ -10,67 +11,86 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ isAdmin, onToggleAdmin }) => {
   const location = useLocation();
+  const { t, language, setLanguage } = useLanguage();
 
   const navItems = [
-    { label: '首页', path: '/', icon: Home },
-    { label: '关于', path: '/about', icon: User },
+    { label: t.nav.home, path: '/', icon: Home },
+    { label: t.nav.about, path: '/about', icon: User },
   ];
 
   const adminItems = [
-    { label: '新文章', path: '/edit/new', icon: PlusSquare },
-    { label: '设置', path: '/settings', icon: Settings },
+    { label: t.nav.newPost, path: '/edit/new', icon: PlusSquare },
+    { label: t.nav.settings, path: '/settings', icon: Settings },
   ];
 
   return (
-    <nav className="sticky top-0 z-50 glass border-b border-gray-200">
+    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          <div className="flex items-center space-x-8">
-            <Link to="/" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              ZenBlog
+          <div className="flex items-center space-x-10">
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">Z</div>
+              <span className="text-xl font-black tracking-tight text-gray-900">ZenBlog</span>
             </Link>
-            <div className="hidden md:flex space-x-6">
+            
+            <div className="hidden md:flex space-x-8">
               {navItems.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center space-x-1 text-sm font-medium transition-colors ${
-                    location.pathname === item.path ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'
+                  className={`relative flex items-center space-x-1.5 text-sm font-semibold transition-colors py-1 ${
+                    location.pathname === item.path ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-900'
                   }`}
                 >
-                  <item.icon size={18} />
+                  <item.icon size={16} />
                   <span>{item.label}</span>
+                  {location.pathname === item.path && (
+                    <motion.div 
+                      layoutId="nav-underline"
+                      className="absolute -bottom-[21px] left-0 right-0 h-0.5 bg-indigo-600"
+                    />
+                  )}
                 </Link>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-5">
+            <button
+              onClick={() => setLanguage(language === 'zh' ? 'en' : 'zh')}
+              className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-95 flex items-center space-x-1 text-xs font-bold"
+            >
+              <Languages size={16} />
+              <span className="uppercase">{language}</span>
+            </button>
+
             {isAdmin && (
-              <div className="hidden md:flex items-center space-x-4 mr-4 border-r pr-4 border-gray-200">
+              <div className="hidden md:flex items-center space-x-6 mr-2 border-r pr-6 border-gray-100">
                 {adminItems.map((item) => (
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex items-center space-x-1 text-sm font-medium transition-colors ${
-                      location.pathname === item.path ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'
+                    className={`flex items-center space-x-1.5 text-sm font-semibold transition-colors ${
+                      location.pathname === item.path ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-900'
                     }`}
                   >
-                    <item.icon size={18} />
+                    <item.icon size={16} />
                     <span>{item.label}</span>
                   </Link>
                 ))}
               </div>
             )}
+            
             <button
               onClick={onToggleAdmin}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${
                 isAdmin 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-indigo-50 text-indigo-600' 
+                  : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
               }`}
             >
-              {isAdmin ? '退出管理' : '后台管理'}
+              <ShieldCheck size={14} />
+              <span>{isAdmin ? t.nav.adminUser : t.nav.adminLogin}</span>
             </button>
           </div>
         </div>
