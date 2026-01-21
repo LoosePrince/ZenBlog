@@ -317,25 +317,44 @@ const App: React.FC = () => {
   };
 
   const handleSaveConfigAndProfile = async (newConfig: GitHubConfig, newProfile: Profile) => {
+    // 1. 检查是否有实质性变更（不包含Token）
+    const oldPublicConfig: PublicConfig | null = config ? {
+      owner: config.owner,
+      repo: config.repo,
+      branch: config.branch
+    } : null;
+
+    const newPublicConfig: PublicConfig = {
+      owner: newConfig.owner,
+      repo: newConfig.repo,
+      branch: newConfig.branch
+    };
+
+    const isConfigChanged = JSON.stringify(oldPublicConfig) !== JSON.stringify(newPublicConfig);
+    const isProfileChanged = JSON.stringify(profile) !== JSON.stringify(newProfile);
+    const hasChanges = isConfigChanged || isProfileChanged;
+
+    // 2. 更新本地状态和存储
     localStorage.setItem('zenblog_config', JSON.stringify(newConfig));
     setConfig(newConfig);
     setProfile(newProfile);
 
-    if (newConfig.token) {
+    // 3. 仅当有实质性变更且有Token时提交
+    if (newConfig.token && hasChanges) {
       const loadId = toast.loading(t.settings.saving);
       try {
         const service = new GitHubService(newConfig);
-        const publicConfig: PublicConfig = {
-          owner: newConfig.owner,
-          repo: newConfig.repo,
-          branch: newConfig.branch
-        };
+        const filesToUpdate = [];
+
+        if (isConfigChanged) {
+          filesToUpdate.push({ path: 'data/config.json', content: JSON.stringify(newPublicConfig, null, 2) });
+        }
+
+        if (isProfileChanged) {
+          filesToUpdate.push({ path: 'data/profile.json', content: JSON.stringify(newProfile, null, 2) });
+        }
         
-        // 一次性提交配置和个人资料
-        await service.commitMultipleFiles('Update settings', [
-          { path: 'data/config.json', content: JSON.stringify(publicConfig, null, 2) },
-          { path: 'data/profile.json', content: JSON.stringify(newProfile, null, 2) }
-        ]);
+        await service.commitMultipleFiles('Update settings', filesToUpdate);
         
         setInitError(null);
         toast.success(t.settings.syncSuccess, { id: loadId });
@@ -344,6 +363,7 @@ const App: React.FC = () => {
         toast.error(`${t.settings.syncError}: ${err.message}`, { id: loadId });
       }
     } else {
+      // 仅更新了Token或无变更，只提示本地保存
       toast.success(t.settings.syncLocal);
     }
   };
