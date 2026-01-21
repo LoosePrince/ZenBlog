@@ -1,10 +1,1 @@
-[
-  {
-    "id": "iq9caa4g9",
-    "title": "使用Github做无后台博客站",
-    "excerpt": "# 无后台\n\n没有账号系统，仅使用Github的Token作为验证，安全性非常高\n\n不过需要你自己保存Token\n\n我的解决方式就是将其保存在本地浏览器中，一旦丢失或找不到了，只要登录Github重新生成一个新的Token即可\n\n# 缺点\n\n1. 没有用户系统\n2. 由于没有用户系统也就没有点赞、评...",
-    "category": "随笔",
-    "date": "2026-01-20T15:25:40.854Z",
-    "contentPath": "posts/iq9caa4g9.md"
-  }
-]
+[]
