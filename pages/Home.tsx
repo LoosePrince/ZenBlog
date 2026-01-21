@@ -91,7 +91,7 @@ const Home: React.FC<HomeProps> = ({ posts, profile, isAdmin }) => {
             <p className="text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest text-sm">{t.home.noPosts}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {posts.map((post, index) => (
               <motion.div
                 key={post.id}

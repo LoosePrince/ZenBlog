@@ -193,8 +193,8 @@ const App: React.FC = () => {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [profile, setProfile] = useState<Profile>({
-    name: "新博主",
-    bio: "极简云端博客已就绪。请前往设置页面配置 Token，数据将自动存储在专用的 data 分支。",
+    name: "ZenBlog",
+    bio: "已就绪，欢迎使用！",
     avatar: "https://t.alcy.cc/tx",
     socials: {}
   });

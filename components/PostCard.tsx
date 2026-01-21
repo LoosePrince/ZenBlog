@@ -16,7 +16,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, isAdmin }) => {
   return (
     <motion.div 
       whileHover={{ y: -4 }}
-      className="group bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-sm border border-gray-100 dark:border-gray-700 transition-all hover:shadow-2xl hover:shadow-indigo-100/50 dark:hover:shadow-indigo-900/30 flex flex-col h-full"
+      className="group bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-all hover:shadow-2xl hover:shadow-indigo-100/50 dark:hover:shadow-indigo-900/30 flex flex-col h-full"
     >
       <div className="flex justify-between items-start mb-6">
         <span className="px-4 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-black rounded-full uppercase tracking-widest">

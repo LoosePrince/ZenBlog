@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, ArrowLeft, Loader2, Eye, FileText, Tag, Calendar, Sparkles, X, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Eye, FileText, Tag, Calendar, Sparkles, X, Settings, ChevronDown, ChevronUp, Clock, Type } from 'lucide-react';
 import { Post, GitHubConfig } from '../types';
 import { GitHubService } from '../services/githubService';
 import { useLanguage, useTheme } from '../App';
@@ -31,7 +30,7 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!isNew);
   const [previewMode, setPreviewMode] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showMobileSettings, setShowMobileSettings] = useState(false);
 
   useEffect(() => {
     if (isNew) return;
@@ -105,44 +104,43 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="hidden md:flex items-center justify-between mb-6 bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700"
+        className="hidden md:flex items-center justify-between mb-8"
       >
         <div className="flex items-center space-x-4">
           <button 
             onClick={() => navigate(-1)} 
             className="group inline-flex items-center text-sm font-bold text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
           >
-            <ArrowLeft size={18} className="mr-2 group-hover:-translate-x-1 transition-transform" /> 
+            <ArrowLeft size={20} className="mr-2 group-hover:-translate-x-1 transition-transform" /> 
             {t.editor.cancel}
           </button>
-          <div className="h-5 w-[1px] bg-gray-200 dark:bg-gray-700"></div>
-          <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-full flex items-center">
-            <Sparkles size={12} className="mr-1.5" />
-            {isNew ? t.editor.newPost || '新文章' : t.editor.editing || '编辑中'}
+          <div className="h-6 w-[1px] bg-gray-200 dark:bg-gray-700"></div>
+          <span className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">
+            {isNew ? t.editor.newPost || '撰写文章' : t.editor.editing || '编辑文章'}
           </span>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           <button
             onClick={() => setPreviewMode(!previewMode)}
-            className={`flex items-center px-4 py-2 rounded-xl font-bold text-xs transition-all border ${
+            className={`flex items-center px-5 py-2.5 rounded-xl font-bold text-sm transition-all border ${
               previewMode 
                 ? 'border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' 
-                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
-            {previewMode ? <FileText size={14} className="mr-1.5" /> : <Eye size={14} className="mr-1.5" />}
-            {previewMode ? (t.editor.edit || '编辑') : (t.editor.preview || '预览')}
+            {previewMode ? <FileText size={16} className="mr-2" /> : <Eye size={16} className="mr-2" />}
+            {previewMode ? (t.editor.edit || '返回编辑') : (t.editor.preview || '预览文章')}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center px-6 py-2 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50 transition-all text-xs"
+            className="flex items-center px-8 py-2.5 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50 transition-all text-sm uppercase tracking-widest shadow-sm hover:shadow-md"
           >
             {saving ? (
-              <div className="w-3 h-3 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mr-1.5"></div>
+              <div className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
             ) : (
-              <Save size={14} className="mr-1.5" />
+              <Save size={16} className="mr-2" />
             )}
             {saving ? t.editor.saving : (isNew ? t.editor.publish : t.editor.save)}
           </button>
@@ -161,7 +159,7 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
         >
           <ArrowLeft size={20} />
         </button>
-        <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
           {isNew ? t.editor.newPost || '新文章' : t.editor.editing || '编辑中'}
         </span>
         <button
@@ -176,65 +174,59 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
         </button>
       </motion.div>
 
-      <div className="max-w-5xl mx-auto">
-        {/* 主编辑区 - 全宽设计 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        {/* 左侧主要编辑区 (2/3) */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white dark:bg-gray-800 rounded-2xl md:rounded-[3rem] shadow-sm border border-gray-100 dark:border-gray-700 p-4 md:p-10"
+          className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-3xl md:rounded-[3rem] shadow-sm border border-gray-100 dark:border-gray-700 p-5 md:p-10 min-h-[80vh]"
         >
           {!previewMode ? (
-            <div className="space-y-4 md:space-y-6">
+            <div className="space-y-6">
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={t.editor.titlePlaceholder}
-                className="w-full text-2xl md:text-4xl lg:text-5xl font-black text-gray-900 dark:text-gray-100 border-none focus:ring-0 bg-transparent placeholder-gray-300 dark:placeholder-gray-600 outline-none"
+                className="w-full text-2xl md:text-4xl font-black text-gray-900 dark:text-gray-100 border-none focus:ring-0 bg-transparent placeholder-gray-300 dark:placeholder-gray-600 outline-none tracking-tight"
               />
               <div className="h-[1px] bg-gray-100 dark:bg-gray-700"></div>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder={t.editor.contentPlaceholder}
-                className="w-full min-h-[60vh] md:min-h-[70vh] p-0 text-base md:text-lg leading-relaxed text-gray-700 dark:text-gray-300 border-none focus:ring-0 bg-transparent resize-none placeholder-gray-300 dark:placeholder-gray-600 outline-none"
+                className="w-full min-h-[60vh] p-0 text-base md:text-lg leading-relaxed text-gray-700 dark:text-gray-300 border-none focus:ring-0 bg-transparent resize-none placeholder-gray-300 dark:placeholder-gray-600 outline-none font-mono"
                 style={{ fontFamily: 'inherit' }}
               />
             </div>
           ) : (
             <div className="markdown-content">
-              <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-gray-900 dark:text-gray-100 mb-6">
+              <h1 className="text-2xl md:text-4xl font-black text-gray-900 dark:text-gray-100 mb-8 tracking-tight">
                 {title || t.editor.titlePlaceholder}
               </h1>
-              <div className="h-[1px] bg-gray-100 dark:bg-gray-700 mb-6"></div>
+              <div className="h-[1px] bg-gray-100 dark:bg-gray-700 mb-8"></div>
               <div className="text-gray-700 dark:text-gray-300" style={{ fontSize: '1rem', lineHeight: '1.75' }}>
                 <ReactMarkdown 
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    h1: ({node, ...props}) => <h1 style={{ fontSize: '1.875rem', fontWeight: '900', color: isDark ? '#f3f4f6' : '#111827', marginTop: '2rem', marginBottom: '1rem', lineHeight: '1.2' }} {...props} />,
-                    h2: ({node, ...props}) => <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: isDark ? '#f3f4f6' : '#111827', marginTop: '1.5rem', marginBottom: '0.75rem', lineHeight: '1.3' }} {...props} />,
-                    h3: ({node, ...props}) => <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: isDark ? '#e5e7eb' : '#111827', marginTop: '1.25rem', marginBottom: '0.5rem', lineHeight: '1.4' }} {...props} />,
-                    p: ({node, ...props}) => <p style={{ marginBottom: '1rem', lineHeight: '1.75', color: isDark ? '#d1d5db' : '#374151' }} {...props} />,
-                    ul: ({node, ...props}) => <ul style={{ marginBottom: '1rem', paddingLeft: '1.5rem', listStyleType: 'disc' }} {...props} />,
-                    ol: ({node, ...props}) => <ol style={{ marginBottom: '1rem', paddingLeft: '1.5rem', listStyleType: 'decimal' }} {...props} />,
-                    li: ({node, ...props}) => <li style={{ marginBottom: '0.5rem' }} {...props} />,
-                    blockquote: ({node, ...props}) => <blockquote style={{ borderLeft: `4px solid ${isDark ? '#818cf8' : '#6366f1'}`, paddingLeft: '1rem', fontStyle: 'italic', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '1rem' }} {...props} />,
+                    h1: ({node, ...props}) => <h1 className="text-2xl font-black mt-8 mb-4 text-gray-900 dark:text-gray-100" {...props} />,
+                    h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-6 mb-3 text-gray-900 dark:text-gray-100" {...props} />,
+                    h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-5 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
+                    p: ({node, ...props}) => <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300" {...props} />,
+                    ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />,
+                    ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-2" {...props} />,
+                    li: ({node, ...props}) => <li className="pl-1" {...props} />,
+                    blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-indigo-500 pl-4 italic text-gray-500 dark:text-gray-400 my-4 bg-gray-50 dark:bg-gray-900 py-2 pr-2 rounded-r-lg" {...props} />,
                     code: ({node, className, children, ...props}) => {
                       const isInline = !className;
                       return isInline ? (
-                        <code style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6', color: isDark ? '#e5e7eb' : '#1f2937', padding: '0.125rem 0.375rem', borderRadius: '0.25rem', fontSize: '0.875em', fontFamily: 'monospace' }} {...props}>{children}</code>
+                        <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono text-indigo-600 dark:text-indigo-400" {...props}>{children}</code>
                       ) : (
-                        <code style={{ display: 'block', backgroundColor: isDark ? '#1f2937' : '#f8fafc', color: isDark ? '#e5e7eb' : '#334155', padding: '1rem', borderRadius: '0.5rem', overflow: 'auto', fontSize: '0.875rem', fontFamily: 'monospace', marginBottom: '1rem', border: `1px solid ${isDark ? '#374151' : '#e2e8f0'}` }} {...props}>{children}</code>
+                        <code className="block bg-gray-900 text-gray-100 p-4 rounded-xl overflow-x-auto text-sm font-mono my-4" {...props}>{children}</code>
                       );
                     },
-                    pre: ({node, ...props}) => <pre style={{ marginBottom: '1rem' }} {...props} />,
-                    a: ({node, ...props}) => <a style={{ color: isDark ? '#818cf8' : '#6366f1', textDecoration: 'underline', fontWeight: '500' }} {...props} />,
-                    img: ({node, ...props}) => <img style={{ borderRadius: '0.75rem', boxShadow: isDark ? '0 10px 15px -3px rgba(0, 0, 0, 0.3)' : '0 10px 15px -3px rgba(0, 0, 0, 0.1)', marginTop: '1rem', marginBottom: '1rem', maxWidth: '100%' }} {...props} />,
-                    table: ({node, ...props}) => <div style={{ overflowX: 'auto', marginBottom: '1rem' }}><table style={{ width: '100%', borderCollapse: 'collapse' }} {...props} /></div>,
-                    th: ({node, ...props}) => <th style={{ border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`, padding: '0.5rem', backgroundColor: isDark ? '#1f2937' : '#f9fafb', fontWeight: '600', textAlign: 'left' }} {...props} />,
-                    td: ({node, ...props}) => <td style={{ border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`, padding: '0.5rem' }} {...props} />,
-                    hr: ({node, ...props}) => <hr style={{ border: 'none', borderTop: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`, marginTop: '1.5rem', marginBottom: '1.5rem' }} {...props} />,
+                    img: ({node, ...props}) => <img className="rounded-xl shadow-lg my-4 max-w-full" {...props} />,
+                    hr: ({node, ...props}) => <hr className="my-8 border-gray-200 dark:border-gray-700" {...props} />,
                   }}
                 >
                   {content || t.editor.contentPlaceholder}
@@ -244,45 +236,161 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
           )}
         </motion.div>
 
-        {/* 桌面端侧边栏设置（可折叠） */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="hidden md:block mt-6"
-        >
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="w-full bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        {/* 右侧侧边栏设置 (1/3) - 桌面端常驻 */}
+        <div className="hidden lg:block space-y-6">
+          {/* 发布设置卡片 */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700"
           >
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
-                <Settings size={18} />
+            <div className="flex items-center space-x-2 mb-6">
+              <Settings size={20} className="text-indigo-600 dark:text-indigo-400" />
+              <h3 className="font-black text-lg text-gray-900 dark:text-gray-100">{t.editor.properties || '文章属性'}</h3>
+            </div>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">
+                  {t.editor.category}
+                </label>
+                <div className="relative">
+                  <select 
+                    value={category} 
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none text-sm font-bold appearance-none cursor-pointer"
+                  >
+                    <option>{t.editor.categories.life}</option>
+                    <option>{t.editor.categories.tech}</option>
+                    <option>{t.editor.categories.essay}</option>
+                    <option>{t.editor.categories.tutorial}</option>
+                  </select>
+                  <ChevronDown size={16} className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
               </div>
-              <span className="font-bold text-gray-900 dark:text-gray-100">{t.editor.properties}</span>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">
+                  {t.editor.excerpt}
+                </label>
+                <textarea
+                  value={excerpt}
+                  onChange={(e) => setExcerpt(e.target.value)}
+                  rows={4}
+                  placeholder={t.editor.excerptHint}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none text-sm resize-none"
+                />
+              </div>
             </div>
-            <div className="text-gray-600 dark:text-gray-400">
-              {showSettings ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-            </div>
+          </motion.div>
+
+          {/* 统计信息卡片 */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 p-6 rounded-3xl border border-indigo-100 dark:border-indigo-900"
+          >
+             <h3 className="font-black text-sm text-indigo-900 dark:text-indigo-300 uppercase tracking-widest mb-4 opacity-70">
+               {t.editor.stats || '统计信息'}
+             </h3>
+             
+             <div className="space-y-4">
+               <div className="flex items-center justify-between">
+                 <div className="flex items-center text-sm font-bold text-gray-600 dark:text-gray-400">
+                   <Type size={16} className="mr-2 opacity-50" />
+                   {t.editor.wordCount || '字数'}
+                 </div>
+                 <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{wordCount}</span>
+               </div>
+               
+               <div className="w-full h-[1px] bg-indigo-200 dark:bg-indigo-800/50"></div>
+               
+               <div className="flex items-center justify-between">
+                 <div className="flex items-center text-sm font-bold text-gray-600 dark:text-gray-400">
+                   <Clock size={16} className="mr-2 opacity-50" />
+                   {t.editor.readTime || '阅读时长'}
+                 </div>
+                 <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{estimatedReadTime} min</span>
+               </div>
+
+               <div className="w-full h-[1px] bg-indigo-200 dark:bg-indigo-800/50"></div>
+
+               <div className="flex items-center justify-between">
+                 <div className="flex items-center text-sm font-bold text-gray-600 dark:text-gray-400">
+                   <Calendar size={16} className="mr-2 opacity-50" />
+                   {t.editor.date || '日期'}
+                 </div>
+                 <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                   {new Date().toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
+                 </span>
+               </div>
+             </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* 移动端底部固定工具栏 */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 safe-area-bottom"
+      >
+        <div className="flex items-center justify-between p-3">
+          {/* 设置按钮 */}
+          <button
+            onClick={() => setShowMobileSettings(!showMobileSettings)}
+            className={`p-3 rounded-xl transition-colors ${
+              showMobileSettings 
+                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' 
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+            }`}
+          >
+            <Settings size={20} />
           </button>
 
-          <AnimatePresence>
-            {showSettings && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4"
-              >
-                {/* 分类 */}
-                <div className="bg-white dark:bg-gray-700 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600">
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 mb-2">
+          {/* 统计信息简略 */}
+          <div className="flex flex-col items-center">
+             <span className="text-xs font-bold text-gray-900 dark:text-gray-100">{wordCount} 字</span>
+             <span className="text-[10px] text-gray-400 dark:text-gray-500">{estimatedReadTime} 分钟阅读</span>
+          </div>
+
+          {/* 保存按钮 */}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center px-5 py-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50 transition-all text-sm uppercase tracking-widest"
+          >
+            {saving ? (
+              <div className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <>
+                <Save size={16} className="mr-2" />
+                {t.editor.save}
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* 移动端设置面板 - 从底部滑出 */}
+        <AnimatePresence>
+          {showMobileSettings && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 overflow-hidden"
+            >
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">
                     {t.editor.category}
                   </label>
                   <select 
                     value={category} 
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-600 border border-gray-200 dark:border-gray-500 text-gray-900 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none text-sm font-medium"
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none text-sm font-bold"
                   >
                     <option>{t.editor.categories.life}</option>
                     <option>{t.editor.categories.tech}</option>
@@ -291,9 +399,8 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
                   </select>
                 </div>
 
-                {/* 摘要 */}
-                <div className="bg-white dark:bg-gray-700 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 md:col-span-2">
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 mb-2">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">
                     {t.editor.excerpt}
                   </label>
                   <textarea
@@ -301,108 +408,9 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
                     onChange={(e) => setExcerpt(e.target.value)}
                     rows={3}
                     placeholder={t.editor.excerptHint}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-600 border border-gray-200 dark:border-gray-500 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none text-sm resize-none"
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none text-sm resize-none"
                   />
                 </div>
-
-                {/* 统计信息 */}
-                <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-900 md:col-span-3">
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{wordCount}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{t.editor.wordCount || '字数'}</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{estimatedReadTime}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{t.editor.readTime || '分钟'}</div>
-                    </div>
-                    <div>
-                      <div className="text-lg font-black text-indigo-600 dark:text-indigo-400">{new Date().toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{t.editor.date || '日期'}</div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      </div>
-
-      {/* 移动端底部固定工具栏 */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50"
-      >
-        <div className="flex items-center justify-between p-3">
-          {/* 设置按钮 */}
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-          >
-            <Settings size={20} />
-          </button>
-
-          {/* 统计信息 */}
-          <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
-            <span>{wordCount} {t.editor.wordCount || '字'}</span>
-            <span>•</span>
-            <span>{estimatedReadTime} {t.post?.minRead || '分钟'}</span>
-          </div>
-
-          {/* 保存按钮 */}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center px-6 py-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50 transition-all"
-          >
-            {saving ? (
-              <div className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              <>
-                <Save size={16} className="mr-2" />
-                {isNew ? t.editor.publish : t.editor.save}
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* 移动端设置面板 */}
-        <AnimatePresence>
-          {showSettings && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="border-t border-gray-200 dark:border-gray-700 p-4 space-y-4 bg-gray-50 dark:bg-gray-900"
-            >
-              <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 mb-2">
-                  {t.editor.category}
-                </label>
-                <select 
-                  value={category} 
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none text-sm"
-                >
-                  <option>{t.editor.categories.life}</option>
-                  <option>{t.editor.categories.tech}</option>
-                  <option>{t.editor.categories.essay}</option>
-                  <option>{t.editor.categories.tutorial}</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 mb-2">
-                  {t.editor.excerpt}
-                </label>
-                <textarea
-                  value={excerpt}
-                  onChange={(e) => setExcerpt(e.target.value)}
-                  rows={3}
-                  placeholder={t.editor.excerptHint}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none text-sm resize-none"
-                />
               </div>
             </motion.div>
           )}

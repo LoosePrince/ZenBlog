@@ -159,7 +159,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
             </div>
           </div>
           
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 dark:text-gray-100 mb-8 md:mb-10 leading-[1.1] tracking-tight">
+          <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-gray-900 dark:text-gray-100 mb-8 md:mb-10 leading-[1.1] tracking-tight">
             {post.title}
           </h1>
 
@@ -221,9 +221,9 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
         <ReactMarkdown 
           remarkPlugins={[remarkGfm]}
           components={{
-            h1: ({node, ...props}) => <h1 style={{ fontSize: '2.25rem', fontWeight: '900', color: isDark ? '#f3f4f6' : '#111827', marginTop: '2rem', marginBottom: '1rem', lineHeight: '1.2' }} {...props} />,
-            h2: ({node, ...props}) => <h2 style={{ fontSize: '1.875rem', fontWeight: '800', color: isDark ? '#f3f4f6' : '#111827', marginTop: '1.75rem', marginBottom: '0.875rem', lineHeight: '1.3' }} {...props} />,
-            h3: ({node, ...props}) => <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: isDark ? '#e5e7eb' : '#111827', marginTop: '1.5rem', marginBottom: '0.75rem', lineHeight: '1.4' }} {...props} />,
+            h1: ({node, ...props}) => <h1 style={{ fontSize: '1.75rem', fontWeight: '900', color: isDark ? '#f3f4f6' : '#111827', marginTop: '2rem', marginBottom: '1rem', lineHeight: '1.2' }} {...props} />,
+            h2: ({node, ...props}) => <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: isDark ? '#f3f4f6' : '#111827', marginTop: '1.75rem', marginBottom: '0.875rem', lineHeight: '1.3' }} {...props} />,
+            h3: ({node, ...props}) => <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: isDark ? '#e5e7eb' : '#111827', marginTop: '1.5rem', marginBottom: '0.75rem', lineHeight: '1.4' }} {...props} />,
             p: ({node, ...props}) => <p style={{ marginBottom: '1.25rem', lineHeight: '1.75' }} {...props} />,
             ul: ({node, ...props}) => <ul style={{ marginBottom: '1.25rem', paddingLeft: '1.5rem', listStyleType: 'disc' }} {...props} />,
             ol: ({node, ...props}) => <ol style={{ marginBottom: '1.25rem', paddingLeft: '1.5rem', listStyleType: 'decimal' }} {...props} />,
