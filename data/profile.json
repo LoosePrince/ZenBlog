@@ -43,56 +43,56 @@
       "design": [
         {
           "name": "UI/UX设计",
-          "level": 75,
+          "level": 65,
           "desc": "中专UI设计专业，作品曾参展，熟练使用设计工具"
         },
         {
           "name": "平面设计",
-          "level": 75,
+          "level": 55,
           "desc": "熟悉Photoshop、Illustrator，擅长品牌设计与视觉创意表达"
         },
         {
           "name": "新媒体运营",
-          "level": 60,
+          "level": 45,
           "desc": "有运营支持和新媒体运营工作经验"
         }
       ],
       "programming": [
         {
           "name": "前端开发",
-          "level": 90,
+          "level": 74,
           "desc": "熟练掌握HTML、CSS、JavaScript，熟悉Vue、React等前端框架"
         },
         {
           "name": "Python",
-          "level": 80,
+          "level": 65,
           "desc": "掌握Python数据分析与处理"
         },
         {
           "name": "后端开发",
-          "level": 70,
+          "level": 55,
           "desc": "掌握Node.js、PHP，有全栈开发项目经验"
         },
         {
           "name": "数据库",
-          "level": 70,
+          "level": 60,
           "desc": "掌握MySQL、PostgreSQL等数据库"
         }
       ],
       "other": [
         {
           "name": "项目管理",
-          "level": 85,
+          "level": 70,
           "desc": "具备团队组建、扩充经验，项目管理与协调经验，能独挡一面"
         },
         {
           "name": "写作能力",
-          "level": 85,
+          "level": 60,
           "desc": "善于内容创作与技术文档编写，有一定的文字功底"
         },
         {
           "name": "沟通协作",
-          "level": 90,
+          "level": 75,
           "desc": "优秀的团队协作能力，擅长沟通"
         }
       ]
