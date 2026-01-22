@@ -44,20 +44,7 @@ ZenBlog uses a configuration file (`config.json`) stored in the `main` branch (a
 
 3. **Deploy config.json**: Place the downloaded `config.json` file in the `public/` directory of your project.
 
-4. **Rebuild and Deploy**: Rebuild your project and deploy. The `config.json` will be included as a static file, and visitors can automatically access your blog data.
-
-### Configuration Priority
-
-The app loads configuration in the following order:
-
-1. **localStorage** (if previously configured by admin, includes token)
-2. **`/config.json`** (static file from `main` branch - **recommended for visitors**)
-3. **URL parameters** (for testing: `?owner=xxx&repo=xxx&branch=data`)
-4. **Auto-detection** (from `github.io` domain)
-
-### Custom Domain Support
-
-When using a custom domain, simply ensure `config.json` is in your `public/` directory. Visitors will automatically load the configuration from `/config.json` without any additional setup.
+4. **Rebuild and Deploy**: Rebuild your project and deploy. The `config.json` will be included as a static file in the `main` branch, and visitors can automatically access your blog data from `/config.json`.
 
 **Note**: The `config.json` file only contains public information (owner, repo, branch). The GitHub token is stored only in localStorage and never committed to the repository.
 

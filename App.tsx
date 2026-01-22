@@ -237,32 +237,6 @@ const App: React.FC = () => {
           }
         }
 
-        // 3. 从 URL 参数读取（方便测试和分享）
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlOwner = urlParams.get('owner');
-        const urlRepo = urlParams.get('repo');
-        if (urlOwner && urlRepo) {
-          setConfig({
-            token: '',
-            owner: urlOwner,
-            repo: urlRepo,
-            branch: urlParams.get('branch') || 'data'
-          });
-          setConfigLoading(false);
-          return;
-        }
-
-        // 4. 从 github.io 域名推断（原有逻辑）
-        const hostname = window.location.hostname;
-        if (hostname.includes('github.io')) {
-          const owner = hostname.split('.')[0];
-          const pathParts = window.location.pathname.split('/').filter(p => p !== '');
-          const repo = pathParts[0] || owner;
-          setConfig({ token: '', owner, repo, branch: 'data' });
-          setConfigLoading(false);
-          return;
-        }
-
         // 没有找到配置
         setConfig(null);
       } catch (err) {
