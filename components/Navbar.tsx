@@ -61,11 +61,13 @@ const Navbar: React.FC<NavbarProps> = ({ isAdmin, onToggleAdmin, profile }) => {
           <div className="flex items-center space-x-10">
             <Link to="/" className="flex items-center space-x-2 group">
               <img 
-                src={profile.avatar} 
-                alt={profile.name}
+                src={profile.siteSettings?.siteIcon || profile.avatar} 
+                alt={profile.siteSettings?.siteName || profile.name}
                 className="w-8 h-8 rounded-lg object-cover border-2 border-indigo-100 dark:border-indigo-900 group-hover:border-indigo-300 dark:group-hover:border-indigo-700 transition-all shadow-sm"
               />
-              <span className="text-xl font-black tracking-tight text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">ZenBlog</span>
+              <span className="text-xl font-black tracking-tight text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                {profile.siteSettings?.siteName || profile.name || 'ZenBlog'}
+              </span>
             </Link>
             
             <div className="hidden md:flex space-x-8">

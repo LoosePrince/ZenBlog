@@ -249,18 +249,37 @@ const App: React.FC = () => {
     loadConfig();
   }, []);
 
-  // 动态更新favicon
+  // 动态更新页面标题、favicon 和 meta description
   useEffect(() => {
-    if (profile.avatar) {
-      const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link');
-      link.type = 'image/x-icon';
-      link.rel = 'icon';
-      link.href = profile.avatar;
-      if (!document.querySelector("link[rel*='icon']")) {
+    // 更新页面标题
+    const siteName = profile.siteSettings?.siteName || profile.name || 'ZenBlog';
+    document.title = siteName;
+
+    // 更新 favicon（优先使用 siteSettings.siteIcon，否则使用 profile.avatar）
+    const iconUrl = profile.siteSettings?.siteIcon || profile.avatar;
+    if (iconUrl) {
+      let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
         document.head.appendChild(link);
       }
+      link.type = iconUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/x-icon';
+      link.href = iconUrl;
     }
-  }, [profile.avatar]);
+
+    // 更新 meta description
+    const siteDescription = profile.siteSettings?.siteDescription || profile.bio || '';
+    if (siteDescription) {
+      let metaDesc = document.querySelector("meta[name='description']") as HTMLMetaElement;
+      if (!metaDesc) {
+        metaDesc = document.createElement('meta');
+        metaDesc.name = 'description';
+        document.head.appendChild(metaDesc);
+      }
+      metaDesc.content = siteDescription;
+    }
+  }, [profile.siteSettings, profile.name, profile.avatar, profile.bio]);
 
   useEffect(() => {
     const hideLoader = () => {

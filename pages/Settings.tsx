@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Github, Save, CheckCircle, Database, ExternalLink, AlertTriangle, Layers, User, Settings as SettingsIcon } from 'lucide-react';
+import { Shield, Github, Save, CheckCircle, Database, ExternalLink, AlertTriangle, Layers, User, Settings as SettingsIcon, Globe } from 'lucide-react';
 import { GitHubConfig, Profile } from '../types';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../App';
@@ -25,8 +25,14 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
   const [avatar, setAvatar] = useState(profile.avatar);
   const [githubUrl, setGithubUrl] = useState(profile.socials.github || '');
 
+  // 站点设置
+  const [siteName, setSiteName] = useState(profile.siteSettings?.siteName || '');
+  const [siteIcon, setSiteIcon] = useState(profile.siteSettings?.siteIcon || '');
+  const [siteDescription, setSiteDescription] = useState(profile.siteSettings?.siteDescription || '');
+
   const [savingConfig, setSavingConfig] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [savingSiteSettings, setSavingSiteSettings] = useState(false);
 
   // 保存GitHub配置（仅保存token，repository信息从config.json读取）
   const handleSaveConfig = async () => {
@@ -63,6 +69,23 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
     }
   };
 
+  // 保存站点设置
+  const handleSaveSiteSettings = async () => {
+    setSavingSiteSettings(true);
+    try {
+      await onSaveProfile({
+        ...profile,
+        siteSettings: {
+          siteName,
+          siteIcon,
+          siteDescription
+        }
+      });
+    } finally {
+      setSavingSiteSettings(false);
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto pb-20 md:pb-0">
       {/* 桌面端顶部 */}
@@ -77,7 +100,7 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
         <div className="flex gap-3">
           <button
             onClick={handleSaveConfig}
-            disabled={savingConfig || savingProfile}
+            disabled={savingConfig || savingProfile || savingSiteSettings}
             className="flex items-center justify-center px-6 py-4 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-[1.5rem] font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
           >
             {savingConfig ? (
@@ -89,7 +112,7 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
           </button>
           <button
             onClick={handleSaveProfile}
-            disabled={savingConfig || savingProfile}
+            disabled={savingConfig || savingProfile || savingSiteSettings}
             className="flex items-center justify-center px-6 py-4 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-[1.5rem] font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
           >
             {savingProfile ? (
@@ -98,6 +121,18 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
               <User size={18} className="mr-2" />
             )}
             {savingProfile ? t.settings.saving : t.settings.saveProfile}
+          </button>
+          <button
+            onClick={handleSaveSiteSettings}
+            disabled={savingConfig || savingProfile || savingSiteSettings}
+            className="flex items-center justify-center px-6 py-4 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-[1.5rem] font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
+          >
+            {savingSiteSettings ? (
+              <div className="w-5 h-5 border-2 border-indigo-600 dark:text-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+            ) : (
+              <Globe size={18} className="mr-2" />
+            )}
+            {savingSiteSettings ? t.settings.saving : t.settings.saveSiteSettings}
           </button>
         </div>
       </div>
@@ -239,6 +274,59 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
               </div>
             </div>
           </motion.section>
+
+          {/* 站点设置 */}
+          <motion.section 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white dark:bg-gray-800 p-4 md:p-10 rounded-xl md:rounded-[3rem] shadow-sm border border-gray-100 dark:border-gray-700"
+          >
+            <div className="flex items-center space-x-3 mb-5 md:mb-10">
+              <div className="p-2 md:p-3 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl md:rounded-2xl">
+                <Globe size={20} className="md:w-6 md:h-6" />
+              </div>
+              <div>
+                <h2 className="text-lg md:text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{t.settings.siteSettings}</h2>
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest mt-0.5">{t.settings.siteSettingsDesc}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4 md:space-y-8">
+              <div>
+                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">{t.settings.siteName}</label>
+                <input
+                  type="text"
+                  value={siteName}
+                  onChange={(e) => setSiteName(e.target.value)}
+                  placeholder="例如：我的个人博客"
+                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none transition-all font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">{t.settings.siteIcon}</label>
+                <input
+                  type="text"
+                  value={siteIcon}
+                  onChange={(e) => setSiteIcon(e.target.value)}
+                  placeholder="https://example.com/favicon.ico"
+                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none transition-all"
+                />
+                <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest italic">{t.settings.siteIconHint}</p>
+              </div>
+              <div>
+                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">{t.settings.siteDescription}</label>
+                <textarea
+                  value={siteDescription}
+                  onChange={(e) => setSiteDescription(e.target.value)}
+                  rows={3}
+                  placeholder="例如：分享技术、生活与思考的个人博客"
+                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none resize-none transition-all font-medium leading-relaxed"
+                />
+                <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest italic">{t.settings.siteDescriptionHint}</p>
+              </div>
+            </div>
+          </motion.section>
         </div>
 
         <aside className="space-y-4 md:space-y-8">
@@ -278,7 +366,7 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
         <div className="flex gap-2">
           <button
             onClick={handleSaveConfig}
-            disabled={savingConfig || savingProfile}
+            disabled={savingConfig || savingProfile || savingSiteSettings}
             className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
           >
             {savingConfig ? (
@@ -295,7 +383,7 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
           </button>
           <button
             onClick={handleSaveProfile}
-            disabled={savingConfig || savingProfile}
+            disabled={savingConfig || savingProfile || savingSiteSettings}
             className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
           >
             {savingProfile ? (
@@ -307,6 +395,23 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
               <>
                 <User size={16} className="mr-1.5" />
                 {t.settings.saveProfile}
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleSaveSiteSettings}
+            disabled={savingConfig || savingProfile || savingSiteSettings}
+            className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
+          >
+            {savingSiteSettings ? (
+              <>
+                <div className="w-4 h-4 border-2 border-indigo-600 dark:text-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                {t.settings.saving}
+              </>
+            ) : (
+              <>
+                <Globe size={16} className="mr-1.5" />
+                {t.settings.saveSiteSettings}
               </>
             )}
           </button>

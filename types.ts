@@ -66,6 +66,12 @@ export interface AboutData {
   games?: Game[]; // 喜欢玩的游戏
 }
 
+export interface SiteSettings {
+  siteName?: string; // 网站名
+  siteIcon?: string; // 网站图标链接
+  siteDescription?: string; // 网站描述
+}
+
 export interface Profile {
   name: string;
   bio: string;
@@ -76,6 +82,7 @@ export interface Profile {
     email?: string;
   };
   about?: AboutData; // 关于页面数据
+  siteSettings?: SiteSettings; // 站点设置
 }
 
 export interface GitHubConfig {
