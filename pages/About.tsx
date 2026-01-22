@@ -1,17 +1,83 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Github, Twitter, Mail, Heart, Code, Coffee, Sparkles, BookOpen, Palette, Brain, MessageCircle, Copy, Check, Play, Pause, User, Music as MusicIcon, Gamepad2, Briefcase, ChevronDown } from 'lucide-react';
-import { Profile } from '../types';
+import { Github, Twitter, Mail, Heart, Code, Coffee, Sparkles, BookOpen, Palette, Brain, MessageCircle, Copy, Check, Play, Pause, User, Music as MusicIcon, Gamepad2, Briefcase, ChevronDown, Edit3, Save, X, Plus, Trash2 } from 'lucide-react';
+import { Profile, Interest, SkillCategory, Work, Music, Contact, Game } from '../types';
 import { useLanguage } from '../App';
+import { toast } from 'react-hot-toast';
 
 interface AboutProps {
   profile: Profile;
+  isAdmin?: boolean;
+  onSave?: (profile: Profile) => Promise<void>;
 }
 
-const About: React.FC<AboutProps> = ({ profile }) => {
+// 图标映射表
+const iconMap: { [key: string]: any } = {
+  Palette, Sparkles, Brain, Code, BookOpen, Github, Twitter, Mail, MessageCircle
+};
+
+// 模板示例（用于首次使用/未配置时的默认值）
+const TEMPLATE_INTRO =
+  '这里是一段「关于我」的简介模板示例：你可以写你是谁、做什么、擅长什么，以及你希望访客从这里获得什么。';
+
+const TEMPLATE_INTERESTS: Interest[] = [
+  { name: '绘画', icon: 'Palette', color: 'text-pink-600', bg: 'bg-pink-50 dark:bg-pink-900/20' },
+  { name: 'UI 设计', icon: 'Sparkles', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+  { name: '编程', icon: 'Code', color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20' },
+];
+
+const TEMPLATE_SKILLS: SkillCategory = {
+  design: [
+    { name: 'UI/UX 设计', level: 70, desc: '示例：熟悉 Figma / Sketch，能独立完成界面与交互设计。' },
+  ],
+  programming: [
+    { name: '前端开发', level: 75, desc: '示例：熟悉 React / TypeScript / Tailwind，能完成中小型项目。' },
+  ],
+  other: [
+    { name: '沟通协作', level: 80, desc: '示例：能推进协作与交付，对需求与细节保持敏感。' },
+  ],
+};
+
+const TEMPLATE_SKILL_CATEGORY_LABELS: { [key: string]: string } = {
+  design: '设计',
+  programming: '开发',
+  other: '其他',
+};
+
+const TEMPLATE_WORKS: Work[] = [
+  { title: '示例项目名称', desc: '示例：用一句话介绍这个项目做什么、解决什么问题。', tags: ['React', 'TypeScript'] },
+];
+
+// 音乐：仅说明改为示例（名称/副标题/链接仍保留原来的演示值）
+const TEMPLATE_MUSIC_DESCRIPTION =
+  '示例：写下你为什么喜欢这首歌、它对你的意义、或想对访客说的话（支持长文本）。';
+
+const TEMPLATE_CONTACTS: Contact[] = [
+  { type: 'wechat', label: '微信', value: '填写你的微信号/ID' },
+  { type: 'email', label: '邮箱', value: 'you@example.com' },
+  { type: 'github', label: 'GitHub', value: 'yourname' },
+];
+
+// 游戏：保留 1 条作为参考
+const TEMPLATE_GAMES: Game[] = [
+  {
+    name: 'Minecraft',
+    icon: 'https://www.minecraft.net/content/dam/minecraftnet/franchise/logos/Homepage_Download-Launcher_Creeper-Logo_500x500.png',
+    quote: '示例：一句你想写的短描述（鼠标悬停可见）',
+  },
+];
+
+const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
   const { t } = useLanguage();
-  const [activeSkillTab, setActiveSkillTab] = useState('design');
+  const [activeSkillTab, setActiveSkillTab] = useState<string>('design');
   const [copiedText, setCopiedText] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  // 技能分类标签（可自定义）
+  const [skillCategoryLabels, setSkillCategoryLabels] = useState<{ [key: string]: string }>(
+    profile.about?.skillCategoryLabels ?? TEMPLATE_SKILL_CATEGORY_LABELS
+  );
   
   // 音乐播放器状态
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -21,106 +87,160 @@ const About: React.FC<AboutProps> = ({ profile }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [showMusicInfo, setShowMusicInfo] = useState(false);
 
-  // 兴趣爱好
-  const interests = [
-    { icon: Palette, label: t.about?.interests_drawing || '绘画', color: 'text-pink-600', bg: 'bg-pink-50 dark:bg-pink-900/20' },
-    { icon: Sparkles, label: t.about?.interests_ui || 'UI设计', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20' },
-    { icon: Brain, label: t.about?.interests_ai || 'AI', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-    { icon: Code, label: t.about?.interests_coding || '编程', color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20' },
-    { icon: BookOpen, label: t.about?.interests_reading || '看书', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20' },
-  ];
+  // 编辑状态数据
+  const [editIntro, setEditIntro] = useState(profile.about?.intro ?? TEMPLATE_INTRO);
+  const [editInterests, setEditInterests] = useState<Interest[]>(
+    profile.about?.interests ?? TEMPLATE_INTERESTS
+  );
+  const [editSkills, setEditSkills] = useState<SkillCategory>(
+    profile.about?.skills ?? TEMPLATE_SKILLS
+  );
+  const [editWorks, setEditWorks] = useState<Work[]>(
+    profile.about?.works ?? TEMPLATE_WORKS
+  );
+  const [editMusic, setEditMusic] = useState<Music>(
+    profile.about?.music || {
+      name: '明天你好',
+      subtitle: 'SER - 钢琴独奏版',
+      url: 'https://music.163.com/song/media/outer/url?id=2612489941.mp3',
+      description: TEMPLATE_MUSIC_DESCRIPTION
+    }
+  );
+  const [editContacts, setEditContacts] = useState<Contact[]>(
+    profile.about?.contacts ?? TEMPLATE_CONTACTS
+  );
+  const [editGames, setEditGames] = useState<Game[]>(
+    profile.about?.games ?? TEMPLATE_GAMES
+  );
 
-  // 技能数据
-  const skillsData = {
-    design: [
-      { name: 'UI/UX设计', level: 75, desc: '中专UI设计专业，作品曾参展，熟练使用设计工具' },
-      { name: '平面设计', level: 75, desc: '熟悉Photoshop、Illustrator，擅长品牌设计与视觉创意表达' },
-      { name: '新媒体运营', level: 60, desc: '有运营支持和新媒体运营工作经验' },
-    ],
-    programming: [
-      { name: '前端开发', level: 90, desc: '熟练掌握HTML、CSS、JavaScript，熟悉Vue、React等前端框架' },
-      { name: 'Python', level: 80, desc: '掌握Python数据分析与处理' },
-      { name: '后端开发', level: 70, desc: '掌握Node.js、PHP，有全栈开发项目经验' },
-      { name: '数据库', level: 70, desc: '掌握MySQL、PostgreSQL等数据库' },
-    ],
-    other: [
-      { name: '项目管理', level: 85, desc: '具备团队组建、扩充经验，项目管理与协调经验，能独挡一面' },
-      { name: '写作能力', level: 85, desc: '善于内容创作与技术文档编写，有一定的文字功底' },
-      { name: '沟通协作', level: 90, desc: '优秀的团队协作能力，擅长沟通' },
-    ],
+  // 当profile更新时，同步编辑状态
+  useEffect(() => {
+    if (profile.about) {
+      setEditIntro(profile.about.intro ?? TEMPLATE_INTRO);
+      setEditInterests(profile.about.interests ?? TEMPLATE_INTERESTS);
+      const skills = profile.about.skills || {};
+      setEditSkills(skills);
+      setEditWorks(profile.about.works ?? TEMPLATE_WORKS);
+      setEditMusic(profile.about.music || {
+        name: '明天你好',
+        subtitle: 'SER - 钢琴独奏版',
+        url: 'https://music.163.com/song/media/outer/url?id=2612489941.mp3',
+        description: TEMPLATE_MUSIC_DESCRIPTION
+      });
+      setEditContacts(profile.about.contacts ?? TEMPLATE_CONTACTS);
+      setEditGames(profile.about.games ?? TEMPLATE_GAMES);
+      
+      // 同步技能分类标签，确保所有分类都有标签
+      const defaultLabels: { [key: string]: string } = TEMPLATE_SKILL_CATEGORY_LABELS;
+      const savedLabels = profile.about.skillCategoryLabels || {};
+      const mergedLabels: { [key: string]: string } = { ...defaultLabels, ...savedLabels };
+      // 确保所有现有分类都有标签
+      Object.keys(skills).forEach(key => {
+        if (!mergedLabels[key]) {
+          mergedLabels[key] = key;
+        }
+      });
+      setSkillCategoryLabels(mergedLabels);
+      
+      // 设置默认激活的标签为第一个分类
+      const firstCategory = Object.keys(skills)[0] || 'design';
+      setActiveSkillTab(firstCategory);
+    }
+  }, [profile.about, t.about]);
+
+  // 从编辑状态读取数据用于显示
+  const interests = editInterests.map(interest => ({
+    icon: iconMap[interest.icon] || Palette,
+    label: interest.name,
+    color: interest.color,
+    bg: interest.bg
+  }));
+
+  const skillsData = editSkills;
+  const games = editGames;
+  const works = { projects: editWorks };
+  
+  const contacts = editContacts.map(contact => {
+    let icon = MessageCircle;
+    let color = 'text-gray-500';
+    if (contact.type === 'wechat') { icon = MessageCircle; color = 'text-green-500'; }
+    else if (contact.type === 'qq') { icon = Mail; color = 'text-blue-500'; }
+    else if (contact.type === 'github') { icon = Github; color = 'text-gray-800 dark:text-gray-200'; }
+    else if (contact.type === 'email') { icon = Mail; color = 'text-red-500'; }
+    else if (contact.type === 'twitter') { icon = Twitter; color = 'text-blue-400'; }
+    return { icon, label: contact.label, value: contact.value, color };
+  });
+
+  // 保存函数
+  const handleSave = async () => {
+    if (!onSave) return;
+    setSaving(true);
+    try {
+      const updatedProfile: Profile = {
+        ...profile,
+        about: {
+          intro: editIntro,
+          interests: editInterests,
+          skills: editSkills,
+          skillCategoryLabels: skillCategoryLabels,
+          works: editWorks,
+          music: editMusic,
+          contacts: editContacts,
+          games: editGames,
+        }
+      };
+      await onSave(updatedProfile);
+      setIsEditing(false);
+      toast.success('保存成功！');
+    } catch (err: any) {
+      toast.error(`保存失败: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  // 添加新分类
+  const handleAddCategory = () => {
+    const newCategoryKey = `category_${Date.now()}`;
+    const updatedSkills = { ...editSkills };
+    updatedSkills[newCategoryKey] = [];
+    setEditSkills(updatedSkills);
+    const updatedLabels = { ...skillCategoryLabels };
+    updatedLabels[newCategoryKey] = '新分类';
+    setSkillCategoryLabels(updatedLabels);
+    setActiveSkillTab(newCategoryKey);
+  };
+  
+  // 删除分类
+  const handleDeleteCategory = (categoryKey: string) => {
+    if (Object.keys(editSkills).length <= 1) {
+      toast.error('至少需要保留一个分类');
+      return;
+    }
+    const updatedSkills = { ...editSkills };
+    delete updatedSkills[categoryKey];
+    setEditSkills(updatedSkills);
+    const updatedLabels = { ...skillCategoryLabels };
+    delete updatedLabels[categoryKey];
+    setSkillCategoryLabels(updatedLabels);
+    // 切换到第一个分类
+    const firstCategory = Object.keys(updatedSkills)[0];
+    setActiveSkillTab(firstCategory);
+  };
+  
+  // 重命名分类
+  const handleRenameCategory = (categoryKey: string, newName: string) => {
+    const updatedLabels = { ...skillCategoryLabels };
+    updatedLabels[categoryKey] = newName;
+    setSkillCategoryLabels(updatedLabels);
   };
 
-  // 游戏数据
-  const games = [
-    { 
-      name: '原神', 
-      icon: 'https://fastcdn.mihoyo.com/static-resource-v2/2025/03/14/516186272072a512a460c81222aecf1d_2940332403691814685.jpg',
-      quote: '原神，启动！'
-    },
-    { 
-      name: '星穹铁道', 
-      icon: 'https://fastcdn.mihoyo.com/static-resource-v2/2025/04/08/a765a9750f8b8eac1887de538609a65d_8400545345141782211.png',
-      quote: '规则就是用来打破的！'
-    },
-    { 
-      name: '绝区零', 
-      icon: 'https://fastcdn.mihoyo.com/static-resource-v2/2025/03/14/09b53fb755412221fedda26863abdfd0_6284584230170612025.png',
-      quote: '法厄同降临在空洞。'
-    },
-    { 
-      name: '崩坏三', 
-      icon: 'https://fastcdn.mihoyo.com/static-resource-v2/2025/03/14/8a502e85049ca5f539ce3f5e7f03e58e_3747759498074886051.jpg',
-      quote: '为世界上所有的美好而战！'
-    },
-    { 
-      name: '月圆之夜', 
-      icon: 'https://www.yueyuanzhiye.com/images/v5/logo.png',
-      quote: '我的回合！'
-    },
-    { 
-      name: 'Minecraft', 
-      icon: 'https://www.minecraft.net/content/dam/minecraftnet/franchise/logos/Homepage_Download-Launcher_Creeper-Logo_500x500.png',
-      quote: 'Creeper? Aw man.'
-    },
-  ];
-
-  // 作品数据
-  const works = {
-    projects: [
-      { 
-        title: '游戏服务器官网', 
-        desc: '前端开发项目，展示服务器信息和玩家社区。',
-        tags: ['前端', 'HTML/CSS'],
-        tagColors: ['bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300', 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300']
-      },
-      { 
-        title: '博客网站', 
-        desc: 'PHP全栈自主开发，支持文章发布和管理功能。',
-        tags: ['全栈', 'PHP'],
-        tagColors: ['bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300', 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300']
-      },
-      { 
-        title: '聊天网站', 
-        desc: 'Vue + Node.js 全栈开发，实时聊天功能。',
-        tags: ['Vue', 'Node.js'],
-        tagColors: ['bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300', 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300']
-      },
-      { 
-        title: 'AI文件整理', 
-        desc: 'Python开发，使用AI技术进行文件智能分类。',
-        tags: ['Python', 'AI'],
-        tagColors: ['bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300', 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300']
-      },
-    ],
-  };
-
-  // 联系方式
-  const contacts = [
-    { icon: MessageCircle, label: t.about?.contact_wechat || '微信', value: 'Qr2051134', color: 'text-green-500' },
-    { icon: Mail, label: t.about?.contact_qq || 'QQ', value: '1377820366', color: 'text-blue-500' },
-    { icon: Github, label: 'GitHub', value: 'LoosePrince', color: 'text-gray-800 dark:text-gray-200' },
-    { icon: Mail, label: t.about?.contact_email || '邮箱', value: '1377820366@qq.com', color: 'text-red-500' },
-  ];
+  // 更新音频源
+  useEffect(() => {
+    if (audioRef.current && editMusic.url) {
+      audioRef.current.src = editMusic.url;
+    }
+  }, [editMusic.url]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -184,10 +304,64 @@ const About: React.FC<AboutProps> = ({ profile }) => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 md:space-y-10 pb-20">
+      {/* 编辑按钮 - 固定在顶部，避免遮挡导航栏 */}
+      {isAdmin && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`sticky top-20 z-40 mb-6 ${isEditing ? 'bg-indigo-50 dark:bg-indigo-900/20 border-2 border-indigo-200 dark:border-indigo-800 rounded-2xl p-4 shadow-lg' : ''}`}
+        >
+          {!isEditing ? (
+            <div className="flex justify-end">
+              <button
+                onClick={() => setIsEditing(true)}
+                className="flex items-center px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+              >
+                <Edit3 size={18} className="mr-2" />
+                编辑关于页面
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300">编辑模式</span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="flex items-center justify-center px-5 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-gray-700 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm hover:shadow active:scale-95"
+                >
+                  <X size={18} className="mr-2" />
+                  取消
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center justify-center px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      保存中...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={18} className="mr-2" />
+                      保存更改
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+
       {/* 隐藏的音频元素 */}
       <audio 
         ref={audioRef} 
-        src="https://music.163.com/song/media/outer/url?id=2612489941.mp3"
+        src={editMusic.url}
         loop
       />
       
@@ -247,28 +421,140 @@ const About: React.FC<AboutProps> = ({ profile }) => {
               <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{t.about?.intro || '简介'}</h2>
             </div>
 
-            <div className="prose dark:prose-invert max-w-none mb-8">
-              <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed">
-                {t.about?.intro_text1 || '我热爱任何有趣的事物。'}
-              </p>
-            </div>
-            
-            <h3 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">{t.about?.interests || '兴趣'}</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-              {interests.map((interest, index) => {
-                const Icon = interest.icon;
-                return (
-                  <motion.div
-                    key={index}
-                    whileHover={{ scale: 1.05 }}
-                    className={`flex flex-col items-center justify-center p-4 rounded-2xl ${interest.bg} transition-colors`}
-                  >
-                    <Icon size={24} className={`mb-2 ${interest.color}`} />
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{interest.label}</span>
-                  </motion.div>
-                );
-              })}
-            </div>
+            {isEditing ? (
+              <div className="space-y-8">
+                {/* 简介编辑 */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">简介</label>
+                  <textarea
+                    value={editIntro}
+                    onChange={(e) => setEditIntro(e.target.value)}
+                    rows={4}
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none"
+                    placeholder="输入个人简介..."
+                  />
+                </div>
+
+                {/* 兴趣与技能编辑 */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">兴趣与技能</label>
+                    <button
+                      onClick={() => setEditInterests([...editInterests, { name: '', icon: 'Palette', color: 'text-pink-600', bg: 'bg-pink-50 dark:bg-pink-900/20' }])}
+                      className="flex items-center px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all active:scale-95"
+                    >
+                      <Plus size={14} className="mr-1" />
+                      添加
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {editInterests.map((interest, index) => (
+                      <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">技能名称</label>
+                            <input
+                              type="text"
+                              value={interest.name}
+                              onChange={(e) => {
+                                const updated = [...editInterests];
+                                updated[index].name = e.target.value;
+                                setEditInterests(updated);
+                              }}
+                              placeholder="例如：绘画"
+                              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">图标名</label>
+                            <input
+                              type="text"
+                              value={interest.icon}
+                              onChange={(e) => {
+                                const updated = [...editInterests];
+                                updated[index].icon = e.target.value;
+                                setEditInterests(updated);
+                              }}
+                              placeholder="例如：Palette"
+                              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">颜色类</label>
+                            <input
+                              type="text"
+                              value={interest.color}
+                              onChange={(e) => {
+                                const updated = [...editInterests];
+                                updated[index].color = e.target.value;
+                                setEditInterests(updated);
+                              }}
+                              placeholder="例如：text-pink-600"
+                              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">背景类</label>
+                            <input
+                              type="text"
+                              value={interest.bg}
+                              onChange={(e) => {
+                                const updated = [...editInterests];
+                                updated[index].bg = e.target.value;
+                                setEditInterests(updated);
+                              }}
+                              placeholder="例如：bg-pink-50 dark:bg-pink-900/20"
+                              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end">
+                          <button
+                            onClick={() => setEditInterests(editInterests.filter((_, i) => i !== index))}
+                            className="flex items-center px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95"
+                          >
+                            <Trash2 size={16} className="mr-1.5" />
+                            <span className="text-xs font-semibold">删除</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {editInterests.length === 0 && (
+                      <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
+                        暂无兴趣与技能，点击上方"添加"按钮添加
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="prose dark:prose-invert max-w-none mb-8">
+                  <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed">
+                    {editIntro}
+                  </p>
+                </div>
+                
+                <h3 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">{t.about?.interests || '兴趣'}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                  {interests.map((interest, index) => {
+                    const Icon = interest.icon;
+                    return (
+                      <motion.div
+                        key={index}
+                        whileHover={{ scale: 1.05 }}
+                        className={`flex flex-col items-center justify-center p-4 rounded-2xl ${interest.bg} transition-colors`}
+                      >
+                        <Icon size={24} className={`mb-2 ${interest.color}`} />
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{interest.label}</span>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </motion.section>
 
           {/* 专业技能 */}
@@ -285,43 +571,199 @@ const About: React.FC<AboutProps> = ({ profile }) => {
               <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{t.about?.skills || '技能'}</h2>
             </div>
 
-            <div className="flex space-x-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-              {['design', 'programming', 'other'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveSkillTab(tab)}
-                  className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
-                    activeSkillTab === tab
-                      ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {tab === 'design' && (t.about?.tab_design || '设计')}
-                  {tab === 'programming' && (t.about?.tab_programming || '编程')}
-                  {tab === 'other' && (t.about?.tab_other || '其他')}
-                </button>
-              ))}
-            </div>
-
-            <div className="space-y-5">
-              {skillsData[activeSkillTab as keyof typeof skillsData].map((skill, index) => (
-                <div key={index} className="group">
-                  <div className="flex justify-between mb-1.5">
-                    <span className="font-bold text-gray-800 dark:text-gray-200">{skill.name}</span>
-                    <span className="text-sm font-bold text-gray-400">{skill.level}%</span>
+            {isEditing ? (
+              <div className="space-y-8">
+                {/* 分类管理 */}
+                <div className="p-5 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-2 border-indigo-200 dark:border-indigo-800 rounded-xl shadow-sm">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">技能分类管理</label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">管理技能分类，可以添加、重命名或删除分类</p>
+                    </div>
+                    <button
+                      onClick={handleAddCategory}
+                      className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-all active:scale-95 shadow-md hover:shadow-lg whitespace-nowrap"
+                    >
+                      <Plus size={16} className="mr-1.5" />
+                      添加分类
+                    </button>
                   </div>
-                  <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mb-2">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      whileInView={{ width: `${skill.level}%` }}
-                      transition={{ duration: 1, delay: 0.2 }}
-                      className="h-full bg-indigo-500 rounded-full"
-                    ></motion.div>
-                  </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{skill.desc}</p>
+                  {Object.keys(editSkills).length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {Object.keys(editSkills).map((categoryKey) => (
+                        <div key={categoryKey} className="group p-4 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-indigo-300 dark:hover:border-indigo-700 transition-all shadow-sm hover:shadow-md">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1 min-w-0">
+                              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">分类名称</label>
+                              <input
+                                type="text"
+                                value={skillCategoryLabels[categoryKey] || categoryKey}
+                                onChange={(e) => handleRenameCategory(categoryKey, e.target.value)}
+                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                placeholder="输入分类名称..."
+                              />
+                              <p className="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                                技能数量: {editSkills[categoryKey]?.length || 0}
+                              </p>
+                            </div>
+                            {Object.keys(editSkills).length > 1 && (
+                              <button
+                                onClick={() => handleDeleteCategory(categoryKey)}
+                                className="flex-shrink-0 p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95 group-hover:opacity-100 opacity-70"
+                                title="删除此分类"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
+                      <p>暂无分类，点击上方"添加分类"按钮添加</p>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+                
+                {/* 各分类的技能编辑 */}
+                {Object.keys(editSkills).map((category) => {
+                  return (
+                    <div key={category} className="p-4 bg-gray-50 dark:bg-gray-700/30 border-2 border-gray-200 dark:border-gray-600 rounded-xl">
+                      <div className="flex items-center justify-between mb-4">
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">{skillCategoryLabels[category] || category}</label>
+                        <button
+                          onClick={() => {
+                            const updated = { ...editSkills };
+                            if (!updated[category]) updated[category] = [];
+                            updated[category] = [...updated[category], { name: '', level: 50, desc: '' }];
+                            setEditSkills(updated);
+                          }}
+                          className="flex items-center px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all active:scale-95"
+                        >
+                          <Plus size={14} className="mr-1" />
+                          添加技能
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        {(editSkills[category] || []).map((skill, index) => (
+                        <div key={index} className="p-4 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl space-y-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_100px] gap-3">
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">技能名称</label>
+                              <input
+                                type="text"
+                                value={skill.name}
+                                onChange={(e) => {
+                                  const updated = { ...editSkills };
+                                  updated[category][index].name = e.target.value;
+                                  setEditSkills(updated);
+                                }}
+                                placeholder="例如：UI/UX设计"
+                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">进度 (%)</label>
+                              <input
+                                type="number"
+                                value={skill.level}
+                                onChange={(e) => {
+                                  const updated = { ...editSkills };
+                                  updated[category][index].level = parseInt(e.target.value) || 0;
+                                  setEditSkills(updated);
+                                }}
+                                min="0"
+                                max="100"
+                                placeholder="0-100"
+                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">技能描述</label>
+                            <textarea
+                              value={skill.desc}
+                              onChange={(e) => {
+                                const updated = { ...editSkills };
+                                updated[category][index].desc = e.target.value;
+                                setEditSkills(updated);
+                              }}
+                              placeholder="输入技能描述..."
+                              rows={2}
+                              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
+                            />
+                          </div>
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => {
+                                const updated = { ...editSkills };
+                                updated[category] = updated[category].filter((_, i) => i !== index);
+                                setEditSkills(updated);
+                              }}
+                              className="flex items-center px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95"
+                            >
+                              <Trash2 size={16} className="mr-1.5" />
+                              <span className="text-xs font-semibold">删除</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      </div>
+                      {(!editSkills[category] || editSkills[category].length === 0) && (
+                        <div className="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">
+                          暂无技能，点击上方"添加技能"按钮添加
+                        </div>
+                      )}
+                    </div>
+                );
+                })}
+              </div>
+            ) : (
+              <>
+                <div className="flex space-x-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                  {Object.keys(skillsData).map((tab) => {
+                    return (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveSkillTab(tab)}
+                        className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
+                          activeSkillTab === tab
+                            ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {skillCategoryLabels[tab] || tab}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="space-y-5">
+                  {(skillsData[activeSkillTab as keyof typeof skillsData] || []).length > 0 ? (
+                    (skillsData[activeSkillTab as keyof typeof skillsData] || []).map((skill, index) => (
+                      <div key={index} className="group">
+                        <div className="flex justify-between mb-1.5">
+                          <span className="font-bold text-gray-800 dark:text-gray-200">{skill.name}</span>
+                          <span className="text-sm font-bold text-gray-400">{skill.level}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mb-2">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            whileInView={{ width: `${skill.level}%` }}
+                            transition={{ duration: 1, delay: 0.2 }}
+                            className="h-full bg-indigo-500 rounded-full"
+                          ></motion.div>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{skill.desc}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-400 dark:text-gray-500 italic">暂无技能数据</p>
+                  )}
+                </div>
+              </>
+            )}
           </motion.section>
 
           {/* 作品展示 */}
@@ -338,25 +780,110 @@ const About: React.FC<AboutProps> = ({ profile }) => {
               <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{t.about?.works || '作品'}</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {works.projects.map((work, index) => (
-                <motion.div
-                  key={index}
-                  whileHover={{ y: -4 }}
-                  className="bg-gray-50 dark:bg-gray-700/50 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all"
-                >
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">{work.title}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">{work.desc}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {work.tags.map((tag, i) => (
-                      <span key={i} className={`text-[10px] px-2 py-1 rounded-md font-bold ${work.tagColors[i] || 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'}`}>
-                        {tag}
-                      </span>
-                    ))}
+            {isEditing ? (
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setEditWorks([...editWorks, { title: '', desc: '', tags: [] }])}
+                    className="flex items-center px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all active:scale-95"
+                  >
+                    <Plus size={14} className="mr-1" />
+                    添加作品
+                  </button>
+                </div>
+                {editWorks.map((work, index) => (
+                  <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl space-y-3">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 space-y-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">项目名称</label>
+                          <input
+                            type="text"
+                            value={work.title}
+                            onChange={(e) => {
+                              const updated = [...editWorks];
+                              updated[index].title = e.target.value;
+                              setEditWorks(updated);
+                            }}
+                            placeholder="例如：游戏服务器官网"
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">项目简介</label>
+                          <textarea
+                            value={work.desc}
+                            onChange={(e) => {
+                              const updated = [...editWorks];
+                              updated[index].desc = e.target.value;
+                              setEditWorks(updated);
+                            }}
+                            placeholder="输入项目简介..."
+                            rows={3}
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">标签（用逗号分隔）</label>
+                          <input
+                            type="text"
+                            value={work.tags.join(', ')}
+                            onChange={(e) => {
+                              const updated = [...editWorks];
+                              updated[index].tags = e.target.value.split(',').map(t => t.trim()).filter(t => t);
+                              setEditWorks(updated);
+                            }}
+                            placeholder="例如：前端, HTML/CSS"
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setEditWorks(editWorks.filter((_, i) => i !== index))}
+                        className="flex items-center px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95"
+                      >
+                        <Trash2 size={16} className="mr-1.5" />
+                        <span className="text-xs font-semibold hidden sm:inline">删除</span>
+                      </button>
+                    </div>
                   </div>
-                </motion.div>
-              ))}
-            </div>
+                ))}
+                {editWorks.length === 0 && (
+                  <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
+                    暂无作品，点击上方"添加作品"按钮添加
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {works.projects.map((work, index) => {
+                  const tagColors = [
+                    'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+                    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+                    'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+                    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+                    'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                  ];
+                  return (
+                    <motion.div
+                      key={index}
+                      whileHover={{ y: -4 }}
+                      className="bg-gray-50 dark:bg-gray-700/50 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all"
+                    >
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">{work.title}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">{work.desc}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {work.tags.map((tag, i) => (
+                          <span key={i} className={`text-[10px] px-2 py-1 rounded-md font-bold ${tagColors[i % tagColors.length] || 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'}`}>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
           </motion.section>
 
         </div>
@@ -393,10 +920,55 @@ const About: React.FC<AboutProps> = ({ profile }) => {
               </div>
             </div>
             
-            <div className="mb-6">
-              <h3 className="text-xl font-black mb-1">明天你好</h3>
-              <p className="text-indigo-200 text-sm font-medium">SER - 钢琴独奏版</p>
-            </div>
+            {isEditing ? (
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-xs font-semibold text-indigo-200 mb-1.5">音乐名称</label>
+                  <input
+                    type="text"
+                    value={editMusic.name}
+                    onChange={(e) => setEditMusic({ ...editMusic, name: e.target.value })}
+                    className="w-full px-3 py-2 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:ring-2 focus:ring-white/50 focus:border-white/40 outline-none transition-all"
+                    placeholder="例如：明天你好"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-indigo-200 mb-1.5">副标题</label>
+                  <input
+                    type="text"
+                    value={editMusic.subtitle}
+                    onChange={(e) => setEditMusic({ ...editMusic, subtitle: e.target.value })}
+                    className="w-full px-3 py-2 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:ring-2 focus:ring-white/50 focus:border-white/40 outline-none transition-all"
+                    placeholder="例如：SER - 钢琴独奏版"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-indigo-200 mb-1.5">音乐链接</label>
+                  <input
+                    type="text"
+                    value={editMusic.url}
+                    onChange={(e) => setEditMusic({ ...editMusic, url: e.target.value })}
+                    className="w-full px-3 py-2 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:ring-2 focus:ring-white/50 focus:border-white/40 outline-none text-sm transition-all"
+                    placeholder="https://..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-indigo-200 mb-1.5">说明</label>
+                  <textarea
+                    value={editMusic.description}
+                    onChange={(e) => setEditMusic({ ...editMusic, description: e.target.value })}
+                    rows={4}
+                    className="w-full px-3 py-2 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:ring-2 focus:ring-white/50 focus:border-white/40 outline-none text-sm resize-none transition-all"
+                    placeholder="输入关于这首歌的故事..."
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="mb-6">
+                <h3 className="text-xl font-black mb-1">{editMusic.name}</h3>
+                <p className="text-indigo-200 text-sm font-medium">{editMusic.subtitle}</p>
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <button 
@@ -434,10 +1006,7 @@ const About: React.FC<AboutProps> = ({ profile }) => {
                   >
                     <div className="pt-3 space-y-2">
                       <p className="text-xs text-indigo-100/90 leading-relaxed font-medium">
-                        {t.about?.music_story1 || '这首歌是我在5年级的时候听的，当时我还在上小学，这首歌的旋律和歌词在那时让我产生了一种很奇妙的感觉。'}
-                      </p>
-                      <p className="text-xs text-indigo-100/90 leading-relaxed font-medium">
-                        {t.about?.music_story2 || '那种感觉我到现在也无法忘却，因为网易云没有我喜欢的版本，所以在此推荐的是钢琴的纯音乐版。'}
+                        {editMusic.description}
                       </p>
                     </div>
                   </motion.div>
@@ -457,26 +1026,106 @@ const About: React.FC<AboutProps> = ({ profile }) => {
               <MessageCircle size={20} className="mr-2 text-indigo-500" />
               {t.about?.contact || '联系我'}
             </h3>
-            <div className="space-y-3">
-              {contacts.map((contact, index) => {
-                const Icon = contact.icon;
-                return (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl group">
-                    <div className="flex items-center space-x-3">
-                      <Icon size={18} className={contact.color} />
-                      <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{contact.label}</span>
+            {isEditing ? (
+              <div className="space-y-3">
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setEditContacts([...editContacts, { type: 'wechat', label: '', value: '' }])}
+                    className="flex items-center px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all active:scale-95"
+                  >
+                    <Plus size={14} className="mr-1" />
+                    添加联系方式
+                  </button>
+                </div>
+                {editContacts.map((contact, index) => (
+                  <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">类型</label>
+                        <select
+                          value={contact.type}
+                          onChange={(e) => {
+                            const updated = [...editContacts];
+                            updated[index].type = e.target.value;
+                            setEditContacts(updated);
+                          }}
+                          className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                        >
+                          <option value="wechat">微信</option>
+                          <option value="qq">QQ</option>
+                          <option value="github">GitHub</option>
+                          <option value="email">邮箱</option>
+                          <option value="twitter">Twitter</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">标签</label>
+                        <input
+                          type="text"
+                          value={contact.label}
+                          onChange={(e) => {
+                            const updated = [...editContacts];
+                            updated[index].label = e.target.value;
+                            setEditContacts(updated);
+                          }}
+                          placeholder="例如：微信"
+                          className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                        />
+                      </div>
                     </div>
-                    <button
-                      onClick={() => handleCopy(contact.value)}
-                      className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                      title={contact.value}
-                    >
-                      {copiedText === contact.value ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
-                    </button>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">内容</label>
+                      <input
+                        type="text"
+                        value={contact.value}
+                        onChange={(e) => {
+                          const updated = [...editContacts];
+                          updated[index].value = e.target.value;
+                          setEditContacts(updated);
+                        }}
+                        placeholder="例如：Qr2051134"
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => setEditContacts(editContacts.filter((_, i) => i !== index))}
+                        className="flex items-center px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95"
+                      >
+                        <Trash2 size={16} className="mr-1.5" />
+                        <span className="text-xs font-semibold">删除</span>
+                      </button>
+                    </div>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+                {editContacts.length === 0 && (
+                  <div className="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">
+                    暂无联系方式，点击上方"添加联系方式"按钮添加
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {contacts.map((contact, index) => {
+                  const Icon = contact.icon;
+                  return (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl group">
+                      <div className="flex items-center space-x-3">
+                        <Icon size={18} className={contact.color} />
+                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{contact.label}</span>
+                      </div>
+                      <button
+                        onClick={() => handleCopy(contact.value)}
+                        className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                        title={contact.value}
+                      >
+                        {copiedText === contact.value ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </motion.div>
 
           {/* 游戏卡片 */}
@@ -490,16 +1139,94 @@ const About: React.FC<AboutProps> = ({ profile }) => {
               <Gamepad2 size={20} className="mr-2 text-purple-500" />
               {t.about?.games || '在玩游戏'}
             </h3>
-            <div className="grid grid-cols-3 gap-3">
-              {games.map((game, index) => (
-                <div key={index} className="group relative aspect-square rounded-xl overflow-hidden cursor-pointer bg-gray-100 dark:bg-gray-700">
-                  <img src={game.icon} alt={game.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
-                    <p className="text-[10px] text-white font-bold text-center line-clamp-3">{game.quote}</p>
-                  </div>
+            {isEditing ? (
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setEditGames([...editGames, { name: '', icon: '', quote: '' }])}
+                    className="flex items-center px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all active:scale-95"
+                  >
+                    <Plus size={14} className="mr-1" />
+                    添加游戏
+                  </button>
                 </div>
-              ))}
-            </div>
+                <div className="grid grid-cols-1 gap-3">
+                  {editGames.map((game, index) => (
+                    <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl space-y-3">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 space-y-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">游戏名称</label>
+                            <input
+                              type="text"
+                              value={game.name}
+                              onChange={(e) => {
+                                const updated = [...editGames];
+                                updated[index].name = e.target.value;
+                                setEditGames(updated);
+                              }}
+                              placeholder="例如：原神"
+                              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">图标链接</label>
+                            <input
+                              type="text"
+                              value={game.icon}
+                              onChange={(e) => {
+                                const updated = [...editGames];
+                                updated[index].icon = e.target.value;
+                                setEditGames(updated);
+                              }}
+                              placeholder="https://..."
+                              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">描述</label>
+                            <textarea
+                              value={game.quote}
+                              onChange={(e) => {
+                                const updated = [...editGames];
+                                updated[index].quote = e.target.value;
+                                setEditGames(updated);
+                              }}
+                              placeholder="输入游戏描述..."
+                              rows={2}
+                              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
+                            />
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setEditGames(editGames.filter((_, i) => i !== index))}
+                          className="flex items-center px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95"
+                        >
+                          <Trash2 size={16} className="mr-1.5" />
+                          <span className="text-xs font-semibold hidden sm:inline">删除</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {editGames.length === 0 && (
+                  <div className="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">
+                    暂无游戏，点击上方"添加游戏"按钮添加
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3">
+                {games.map((game, index) => (
+                  <div key={index} className="group relative aspect-square rounded-xl overflow-hidden cursor-pointer bg-gray-100 dark:bg-gray-700">
+                    <img src={game.icon} alt={game.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                      <p className="text-[10px] text-white font-bold text-center line-clamp-3">{game.quote}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.div>
 
           {/* 技术栈 */}

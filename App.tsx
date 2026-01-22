@@ -117,7 +117,7 @@ const AppContent: React.FC<{
               <Route path="/post/:id" element={<PageWrapper><PostDetail posts={posts} config={config} profile={profile} isAdmin={isAdmin} onDelete={handleDeletePost} /></PageWrapper>} />
               <Route path="/edit/:id" element={<PageWrapper><Editor posts={posts} config={config} onSave={handleSavePost} /></PageWrapper>} />
               <Route path="/settings" element={<PageWrapper><Settings config={config} profile={profile} onSaveConfig={handleSaveConfig} onSaveProfile={handleSaveProfile} onSaveConfigAndProfile={handleSaveConfigAndProfile} onDownloadConfig={handleDownloadConfig} /></PageWrapper>} />
-              <Route path="/about" element={<PageWrapper><About profile={profile} /></PageWrapper>} />
+              <Route path="/about" element={<PageWrapper><About profile={profile} isAdmin={isAdmin} onSave={handleSaveProfile} /></PageWrapper>} />
             </Routes>
           </AnimatePresence>
         )}

@@ -13,6 +13,59 @@ export interface Post {
   };
 }
 
+export interface Interest {
+  name: string;
+  icon: string; // 图标名称（lucide-react图标名）
+  color: string; // 颜色类名，如 'text-pink-600'
+  bg: string; // 背景色类名，如 'bg-pink-50 dark:bg-pink-900/20'
+}
+
+export interface Skill {
+  name: string;
+  level: number; // 0-100
+  desc: string;
+}
+
+export interface SkillCategory {
+  [key: string]: Skill[];
+}
+
+export interface Work {
+  title: string;
+  desc: string;
+  tags: string[];
+}
+
+export interface Music {
+  name: string;
+  subtitle: string;
+  url: string;
+  description: string;
+}
+
+export interface Contact {
+  type: string; // 'wechat' | 'qq' | 'github' | 'email' | 'twitter'
+  label: string;
+  value: string;
+}
+
+export interface Game {
+  name: string;
+  icon: string; // 图标链接
+  quote: string; // 描述
+}
+
+export interface AboutData {
+  intro?: string; // 简介文本
+  interests?: Interest[]; // 兴趣与技能
+  skills?: SkillCategory; // 专业能力（按分类）
+  skillCategoryLabels?: { [key: string]: string }; // 技能分类标签（可自定义）
+  works?: Work[]; // 我的作品
+  music?: Music; // 音乐
+  contacts?: Contact[]; // 联系方式
+  games?: Game[]; // 喜欢玩的游戏
+}
+
 export interface Profile {
   name: string;
   bio: string;
@@ -22,6 +75,7 @@ export interface Profile {
     twitter?: string;
     email?: string;
   };
+  about?: AboutData; // 关于页面数据
 }
 
 export interface GitHubConfig {
