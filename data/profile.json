@@ -95,20 +95,12 @@
           "level": 90,
           "desc": "优秀的团队协作能力，擅长沟通"
         }
-      ],
-      "category_1769073612127": [
-        {
-          "name": "test",
-          "level": 50,
-          "desc": "zheshimiaoshu"
-        }
       ]
     },
     "skillCategoryLabels": {
       "design": "设计",
       "programming": "编程",
-      "other": "其他",
-      "category_1769073612127": "新分类"
+      "other": "其他"
     },
     "works": [
       {
