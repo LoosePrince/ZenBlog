@@ -66,10 +66,9 @@ const AppContent: React.FC<{
   handleSaveConfigAndProfile: (c: GitHubConfig, p: Profile) => Promise<void>;
   handleSavePost: (p: Partial<Post>, c: string) => Promise<void>;
   handleDeletePost: (id: string) => Promise<void>;
-  handleDownloadConfig: () => void;
 }> = ({
   isAdmin, onToggleAdmin, posts, profile, config, configLoading, loading, initError,
-  handleSaveConfig, handleSaveProfile, handleSaveConfigAndProfile, handleSavePost, handleDeletePost, handleDownloadConfig
+  handleSaveConfig, handleSaveProfile, handleSaveConfigAndProfile, handleSavePost, handleDeletePost
 }) => {
   const location = useLocation();
   const { t } = useLanguage();
@@ -116,7 +115,7 @@ const AppContent: React.FC<{
               <Route path="/" element={<PageWrapper><Home posts={posts} profile={profile} isAdmin={isAdmin} /></PageWrapper>} />
               <Route path="/post/:id" element={<PageWrapper><PostDetail posts={posts} config={config} profile={profile} isAdmin={isAdmin} onDelete={handleDeletePost} /></PageWrapper>} />
               <Route path="/edit/:id" element={<PageWrapper><Editor posts={posts} config={config} onSave={handleSavePost} /></PageWrapper>} />
-              <Route path="/settings" element={<PageWrapper><Settings config={config} profile={profile} onSaveConfig={handleSaveConfig} onSaveProfile={handleSaveProfile} onSaveConfigAndProfile={handleSaveConfigAndProfile} onDownloadConfig={handleDownloadConfig} /></PageWrapper>} />
+              <Route path="/settings" element={<PageWrapper><Settings config={config} profile={profile} onSaveConfig={handleSaveConfig} onSaveProfile={handleSaveProfile} onSaveConfigAndProfile={handleSaveConfigAndProfile} /></PageWrapper>} />
               <Route path="/about" element={<PageWrapper><About profile={profile} isAdmin={isAdmin} onSave={handleSaveProfile} /></PageWrapper>} />
             </Routes>
           </AnimatePresence>
@@ -317,31 +316,6 @@ const App: React.FC = () => {
     toast.success(t.settings.syncLocal);
   };
 
-  // 下载 config.json 文件（用于部署到 main 分支）
-  const handleDownloadConfig = () => {
-    if (!config || !config.owner || !config.repo) {
-      toast.error('请先配置仓库信息');
-      return;
-    }
-
-    const publicConfig: PublicConfig = {
-      owner: config.owner,
-      repo: config.repo,
-      branch: config.branch || 'data'
-    };
-
-    const blob = new Blob([JSON.stringify(publicConfig, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'config.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success('config.json 已下载，请将其放到 public 目录并重新构建部署');
-  };
-
   const handleSaveProfile = async (newProfile: Profile) => {
     setProfile(newProfile);
     if (config?.token) {
@@ -486,7 +460,6 @@ const App: React.FC = () => {
             handleSaveConfigAndProfile={handleSaveConfigAndProfile}
             handleSavePost={handleSavePost}
             handleDeletePost={handleDeletePost}
-            handleDownloadConfig={handleDownloadConfig}
           />
         </Router>
       </LanguageContext.Provider>

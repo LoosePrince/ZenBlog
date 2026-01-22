@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Github, Save, CheckCircle, Database, ExternalLink, AlertTriangle, Layers, User, Settings as SettingsIcon, Download } from 'lucide-react';
+import { Shield, Github, Save, CheckCircle, Database, ExternalLink, AlertTriangle, Layers, User, Settings as SettingsIcon } from 'lucide-react';
 import { GitHubConfig, Profile } from '../types';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../App';
@@ -10,43 +10,56 @@ interface SettingsProps {
   onSaveConfig: (config: GitHubConfig) => Promise<void>;
   onSaveProfile: (profile: Profile) => Promise<void>;
   onSaveConfigAndProfile: (config: GitHubConfig, profile: Profile) => Promise<void>;
-  onDownloadConfig: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSaveProfile, onSaveConfigAndProfile, onDownloadConfig }) => {
+const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSaveProfile, onSaveConfigAndProfile }) => {
   const { t } = useLanguage();
   const [token, setToken] = useState(config?.token || '');
-  const [owner, setOwner] = useState(config?.owner || '');
-  const [repo, setRepo] = useState(config?.repo || '');
-  const [branch, setBranch] = useState(config?.branch || 'data');
+  // Repository配置从config中读取，不可编辑
+  const owner = config?.owner || '';
+  const repo = config?.repo || '';
+  const branch = config?.branch || 'data';
 
   const [name, setName] = useState(profile.name);
   const [bio, setBio] = useState(profile.bio);
   const [avatar, setAvatar] = useState(profile.avatar);
   const [githubUrl, setGithubUrl] = useState(profile.socials.github || '');
 
-  const [saving, setSaving] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
 
-  const handleSave = async () => {
-    if (!token || !owner || !repo) {
-      alert(t.settings.fillConfig);
+  // 保存GitHub配置（仅保存token，repository信息从config.json读取）
+  const handleSaveConfig = async () => {
+    if (!token) {
+      alert(t.settings.enterToken);
       return;
     }
-    setSaving(true);
+    if (!config || !config.owner || !config.repo) {
+      alert(t.settings.configRequired);
+      return;
+    }
+    setSavingConfig(true);
     try {
-      // 使用合并提交函数，一次性提交配置和个人资料
-      await onSaveConfigAndProfile(
-        { token, owner, repo, branch },
-        {
-          ...profile,
-          name,
-          bio,
-          avatar,
-          socials: { ...profile.socials, github: githubUrl }
-        }
-      );
+      // 只保存token，repository信息从现有config中获取
+      await onSaveConfig({ token, owner: config.owner, repo: config.repo, branch: config.branch || 'data' });
     } finally {
-      setSaving(false);
+      setSavingConfig(false);
+    }
+  };
+
+  // 保存个人资料（name、bio、avatar、socials）
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      await onSaveProfile({
+        ...profile,
+        name,
+        bio,
+        avatar,
+        socials: { ...profile.socials, github: githubUrl }
+      });
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -61,18 +74,32 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
           </h1>
           <p className="text-gray-400 dark:text-gray-500 font-medium italic">{t.settings.subtitle}</p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center justify-center px-8 py-4 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-[1.5rem] font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
-        >
-          {saving ? (
-            <div className="w-5 h-5 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-          ) : (
-            <Save size={18} className="mr-2" />
-          )}
-          {saving ? t.settings.saving : t.settings.save}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleSaveConfig}
+            disabled={savingConfig || savingProfile}
+            className="flex items-center justify-center px-6 py-4 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-[1.5rem] font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
+          >
+            {savingConfig ? (
+              <div className="w-5 h-5 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+            ) : (
+              <Database size={18} className="mr-2" />
+            )}
+            {savingConfig ? t.settings.saving : t.settings.saveToken}
+          </button>
+          <button
+            onClick={handleSaveProfile}
+            disabled={savingConfig || savingProfile}
+            className="flex items-center justify-center px-6 py-4 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-[1.5rem] font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
+          >
+            {savingProfile ? (
+              <div className="w-5 h-5 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+            ) : (
+              <User size={18} className="mr-2" />
+            )}
+            {savingProfile ? t.settings.saving : t.settings.saveProfile}
+          </button>
+        </div>
       </div>
 
       {/* 移动端顶部简化标题 */}
@@ -127,8 +154,8 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
                 <input
                   type="text"
                   value={owner}
-                  onChange={(e) => setOwner(e.target.value)}
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none transition-all"
+                  disabled
+                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-lg md:rounded-2xl cursor-not-allowed"
                 />
               </div>
               <div>
@@ -136,8 +163,8 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
                 <input
                   type="text"
                   value={repo}
-                  onChange={(e) => setRepo(e.target.value)}
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none transition-all"
+                  disabled
+                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-lg md:rounded-2xl cursor-not-allowed"
                 />
               </div>
 
@@ -146,26 +173,11 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
                 <input
                   type="text"
                   value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
-                  placeholder="data"
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-900 text-indigo-700 dark:text-indigo-300 font-black rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none"
+                  disabled
+                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900 text-indigo-600 dark:text-indigo-400 font-black rounded-lg md:rounded-2xl cursor-not-allowed"
                 />
-                <p className="mt-2 text-[10px] text-indigo-400 dark:text-indigo-500 font-bold uppercase tracking-widest italic">
-                  {t.settings.branchHint}
-                </p>
-              </div>
-
-              <div className="md:col-span-2">
-                <button
-                  onClick={onDownloadConfig}
-                  className="w-full flex items-center justify-center px-4 md:px-6 py-2.5 md:py-3 border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg md:rounded-xl font-black hover:bg-gray-100 dark:hover:bg-gray-600 transition-all active:scale-95 uppercase tracking-widest text-xs"
-                >
-                  <Download size={16} className="mr-2" />
-                  下载 config.json（用于部署）
-                </button>
-                <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest">
-                  将下载的 config.json 放到 public 目录，重新构建部署后访客即可自动获取配置
-                </p>
+                <p className="mt-2 text-[10px] text-indigo-400 dark:text-indigo-500 font-bold uppercase tracking-widest italic">{t.settings.branchHint}</p>
+                <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest italic">{t.settings.configReadOnly}</p>
               </div>
             </div>
           </motion.section>
@@ -263,23 +275,42 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
         animate={{ opacity: 1, y: 0 }}
         className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 p-3"
       >
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full flex items-center justify-center px-5 py-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-sm"
-        >
-          {saving ? (
-            <>
-              <div className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-              {t.settings.saving}
-            </>
-          ) : (
-            <>
-              <Save size={18} className="mr-2" />
-              {t.settings.save}
-            </>
-          )}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleSaveConfig}
+            disabled={savingConfig || savingProfile}
+            className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
+          >
+            {savingConfig ? (
+              <>
+                <div className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                {t.settings.saving}
+              </>
+            ) : (
+              <>
+                <Database size={16} className="mr-1.5" />
+                {t.settings.saveToken}
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleSaveProfile}
+            disabled={savingConfig || savingProfile}
+            className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
+          >
+            {savingProfile ? (
+              <>
+                <div className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                {t.settings.saving}
+              </>
+            ) : (
+              <>
+                <User size={16} className="mr-1.5" />
+                {t.settings.saveProfile}
+              </>
+            )}
+          </button>
+        </div>
       </motion.div>
     </div>
   );

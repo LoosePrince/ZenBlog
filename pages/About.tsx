@@ -191,9 +191,9 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
       };
       await onSave(updatedProfile);
       setIsEditing(false);
-      toast.success('保存成功！');
+      toast.success(t.about?.saveSuccess || '保存成功！');
     } catch (err: any) {
-      toast.error(`保存失败: ${err.message}`);
+      toast.error(`${t.about?.saveError || '保存失败'}: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -214,7 +214,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
   // 删除分类
   const handleDeleteCategory = (categoryKey: string) => {
     if (Object.keys(editSkills).length <= 1) {
-      toast.error('至少需要保留一个分类');
+      toast.error(t.about?.atLeastOneCategory || '至少需要保留一个分类');
       return;
     }
     const updatedSkills = { ...editSkills };
@@ -318,14 +318,14 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                 className="flex items-center px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg active:scale-95"
               >
                 <Edit3 size={18} className="mr-2" />
-                编辑关于页面
+                {t.about?.editAbout || '编辑关于页面'}
               </button>
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300">编辑模式</span>
+                <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300">{t.about?.editMode || '编辑模式'}</span>
               </div>
               <div className="flex gap-2">
                 <button
@@ -333,7 +333,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                   className="flex items-center justify-center px-5 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-gray-700 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm hover:shadow active:scale-95"
                 >
                   <X size={18} className="mr-2" />
-                  取消
+                  {t.about?.cancel || t.common.cancel}
                 </button>
                 <button
                   onClick={handleSave}
@@ -343,12 +343,12 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                   {saving ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      保存中...
+                      {t.about?.saving || '保存中...'}
                     </>
                   ) : (
                     <>
                       <Save size={18} className="mr-2" />
-                      保存更改
+                      {t.about?.saveChanges || '保存更改'}
                     </>
                   )}
                 </button>
@@ -425,26 +425,26 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
               <div className="space-y-8">
                 {/* 简介编辑 */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">简介</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t.about?.introLabel || '简介'}</label>
                   <textarea
                     value={editIntro}
                     onChange={(e) => setEditIntro(e.target.value)}
                     rows={4}
                     className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none"
-                    placeholder="输入个人简介..."
+                    placeholder={t.about?.introPlaceholder || '输入个人简介...'}
                   />
                 </div>
 
                 {/* 兴趣与技能编辑 */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">兴趣与技能</label>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t.about?.interestsLabel || '兴趣与技能'}</label>
                     <button
                       onClick={() => setEditInterests([...editInterests, { name: '', icon: 'Palette', color: 'text-pink-600', bg: 'bg-pink-50 dark:bg-pink-900/20' }])}
                       className="flex items-center px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all active:scale-95"
                     >
                       <Plus size={14} className="mr-1" />
-                      添加
+                      {t.about?.addInterest || '添加'}
                     </button>
                   </div>
                   <div className="space-y-3">
@@ -452,7 +452,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                       <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl space-y-3">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">技能名称</label>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.interestName || '技能名称'}</label>
                             <input
                               type="text"
                               value={interest.name}
@@ -466,7 +466,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">图标名</label>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.interestIcon || '图标名'}</label>
                             <input
                               type="text"
                               value={interest.icon}
@@ -482,7 +482,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">颜色类</label>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.interestColor || '颜色类'}</label>
                             <input
                               type="text"
                               value={interest.color}
@@ -496,7 +496,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">背景类</label>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.interestBg || '背景类'}</label>
                             <input
                               type="text"
                               value={interest.bg}
@@ -516,14 +516,14 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                             className="flex items-center px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95"
                           >
                             <Trash2 size={16} className="mr-1.5" />
-                            <span className="text-xs font-semibold">删除</span>
+                            <span className="text-xs font-semibold">{t.about?.delete || t.common.delete}</span>
                           </button>
                         </div>
                       </div>
                     ))}
                     {editInterests.length === 0 && (
                       <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
-                        暂无兴趣与技能，点击上方"添加"按钮添加
+                        {t.about?.noInterests || '暂无兴趣与技能，点击上方"添加"按钮添加'}
                       </div>
                     )}
                   </div>
@@ -577,15 +577,15 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                 <div className="p-5 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-2 border-indigo-200 dark:border-indigo-800 rounded-xl shadow-sm">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">技能分类管理</label>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">管理技能分类，可以添加、重命名或删除分类</p>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">{t.about?.skillCategoryManagement || '技能分类管理'}</label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t.about?.skillCategoryDesc || '管理技能分类，可以添加、重命名或删除分类'}</p>
                     </div>
                     <button
                       onClick={handleAddCategory}
                       className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-all active:scale-95 shadow-md hover:shadow-lg whitespace-nowrap"
                     >
                       <Plus size={16} className="mr-1.5" />
-                      添加分类
+                      {t.about?.addCategory || '添加分类'}
                     </button>
                   </div>
                   {Object.keys(editSkills).length > 0 ? (
@@ -594,23 +594,23 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                         <div key={categoryKey} className="group p-4 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-indigo-300 dark:hover:border-indigo-700 transition-all shadow-sm hover:shadow-md">
                           <div className="flex items-start gap-3">
                             <div className="flex-1 min-w-0">
-                              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">分类名称</label>
+                              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">{t.about?.categoryName || '分类名称'}</label>
                               <input
                                 type="text"
                                 value={skillCategoryLabels[categoryKey] || categoryKey}
                                 onChange={(e) => handleRenameCategory(categoryKey, e.target.value)}
                                 className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                                placeholder="输入分类名称..."
+                                placeholder={t.about?.categoryName || '输入分类名称...'}
                               />
                               <p className="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                                技能数量: {editSkills[categoryKey]?.length || 0}
+                                {t.about?.skillCount || '技能数量'}: {editSkills[categoryKey]?.length || 0}
                               </p>
                             </div>
                             {Object.keys(editSkills).length > 1 && (
                               <button
                                 onClick={() => handleDeleteCategory(categoryKey)}
                                 className="flex-shrink-0 p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95 group-hover:opacity-100 opacity-70"
-                                title="删除此分类"
+                                title={t.about?.deleteCategory || '删除此分类'}
                               >
                                 <Trash2 size={16} />
                               </button>
@@ -621,7 +621,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
-                      <p>暂无分类，点击上方"添加分类"按钮添加</p>
+                      <p>{t.about?.noCategories || '暂无分类，点击上方"添加分类"按钮添加'}</p>
                     </div>
                   )}
                 </div>
@@ -642,7 +642,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                           className="flex items-center px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all active:scale-95"
                         >
                           <Plus size={14} className="mr-1" />
-                          添加技能
+                          {t.about?.addSkill || '添加技能'}
                         </button>
                       </div>
                       <div className="space-y-3">
@@ -650,7 +650,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                         <div key={index} className="p-4 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl space-y-3">
                           <div className="grid grid-cols-1 sm:grid-cols-[1fr_100px] gap-3">
                             <div>
-                              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">技能名称</label>
+                              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.skillName || '技能名称'}</label>
                               <input
                                 type="text"
                                 value={skill.name}
@@ -664,7 +664,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">进度 (%)</label>
+                              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.skillLevel || '进度 (%)'}</label>
                               <input
                                 type="number"
                                 value={skill.level}
@@ -681,7 +681,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                             </div>
                           </div>
                           <div>
-                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">技能描述</label>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.skillDesc || '技能描述'}</label>
                             <textarea
                               value={skill.desc}
                               onChange={(e) => {
@@ -689,7 +689,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                                 updated[category][index].desc = e.target.value;
                                 setEditSkills(updated);
                               }}
-                              placeholder="输入技能描述..."
+                              placeholder={t.about?.skillDescPlaceholder || '输入技能描述...'}
                               rows={2}
                               className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
                             />
@@ -704,7 +704,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                               className="flex items-center px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95"
                             >
                               <Trash2 size={16} className="mr-1.5" />
-                              <span className="text-xs font-semibold">删除</span>
+                              <span className="text-xs font-semibold">{t.about?.delete || t.common.delete}</span>
                             </button>
                           </div>
                         </div>
@@ -712,7 +712,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                       </div>
                       {(!editSkills[category] || editSkills[category].length === 0) && (
                         <div className="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">
-                          暂无技能，点击上方"添加技能"按钮添加
+                          {t.about?.noSkills || '暂无技能，点击上方"添加技能"按钮添加'}
                         </div>
                       )}
                     </div>
@@ -788,69 +788,69 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                     className="flex items-center px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all active:scale-95"
                   >
                     <Plus size={14} className="mr-1" />
-                    添加作品
+                    {t.about?.addWork || '添加作品'}
                   </button>
                 </div>
                 {editWorks.map((work, index) => (
                   <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl space-y-3">
-                    <div className="flex items-start gap-2">
-                      <div className="flex-1 space-y-3">
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">项目名称</label>
-                          <input
-                            type="text"
-                            value={work.title}
-                            onChange={(e) => {
-                              const updated = [...editWorks];
-                              updated[index].title = e.target.value;
-                              setEditWorks(updated);
-                            }}
-                            placeholder="例如：游戏服务器官网"
-                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">项目简介</label>
-                          <textarea
-                            value={work.desc}
-                            onChange={(e) => {
-                              const updated = [...editWorks];
-                              updated[index].desc = e.target.value;
-                              setEditWorks(updated);
-                            }}
-                            placeholder="输入项目简介..."
-                            rows={3}
-                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">标签（用逗号分隔）</label>
-                          <input
-                            type="text"
-                            value={work.tags.join(', ')}
-                            onChange={(e) => {
-                              const updated = [...editWorks];
-                              updated[index].tags = e.target.value.split(',').map(t => t.trim()).filter(t => t);
-                              setEditWorks(updated);
-                            }}
-                            placeholder="例如：前端, HTML/CSS"
-                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                          />
-                        </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.workTitle || '项目名称'}</label>
+                        <input
+                          type="text"
+                          value={work.title}
+                          onChange={(e) => {
+                            const updated = [...editWorks];
+                            updated[index].title = e.target.value;
+                            setEditWorks(updated);
+                          }}
+                          placeholder="例如：游戏服务器官网"
+                          className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                        />
                       </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.workDesc || '项目简介'}</label>
+                        <textarea
+                          value={work.desc}
+                          onChange={(e) => {
+                            const updated = [...editWorks];
+                            updated[index].desc = e.target.value;
+                            setEditWorks(updated);
+                          }}
+                          placeholder="输入项目简介..."
+                          rows={3}
+                          className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.workTags || '标签（用逗号分隔）'}</label>
+                        <input
+                          type="text"
+                          value={work.tags.join(', ')}
+                          onChange={(e) => {
+                            const updated = [...editWorks];
+                            updated[index].tags = e.target.value.split(',').map(t => t.trim()).filter(t => t);
+                            setEditWorks(updated);
+                          }}
+                          placeholder="例如：前端, HTML/CSS"
+                          className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
                       <button
                         onClick={() => setEditWorks(editWorks.filter((_, i) => i !== index))}
                         className="flex items-center px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95"
                       >
                         <Trash2 size={16} className="mr-1.5" />
-                        <span className="text-xs font-semibold hidden sm:inline">删除</span>
+                        <span className="text-xs font-semibold">{t.about?.delete || t.common.delete}</span>
                       </button>
                     </div>
                   </div>
                 ))}
                 {editWorks.length === 0 && (
                   <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
-                    暂无作品，点击上方"添加作品"按钮添加
+                    {t.about?.noWorks || '暂无作品，点击上方"添加作品"按钮添加'}
                   </div>
                 )}
               </div>
@@ -923,7 +923,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
             {isEditing ? (
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-xs font-semibold text-indigo-200 mb-1.5">音乐名称</label>
+                  <label className="block text-xs font-semibold text-indigo-200 mb-1.5">{t.about?.musicName || '音乐名称'}</label>
                   <input
                     type="text"
                     value={editMusic.name}
@@ -933,7 +933,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-indigo-200 mb-1.5">副标题</label>
+                  <label className="block text-xs font-semibold text-indigo-200 mb-1.5">{t.about?.musicSubtitle || '副标题'}</label>
                   <input
                     type="text"
                     value={editMusic.subtitle}
@@ -943,7 +943,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-indigo-200 mb-1.5">音乐链接</label>
+                  <label className="block text-xs font-semibold text-indigo-200 mb-1.5">{t.about?.musicUrl || '音乐链接'}</label>
                   <input
                     type="text"
                     value={editMusic.url}
@@ -953,13 +953,13 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-indigo-200 mb-1.5">说明</label>
+                  <label className="block text-xs font-semibold text-indigo-200 mb-1.5">{t.about?.musicDesc || '说明'}</label>
                   <textarea
                     value={editMusic.description}
                     onChange={(e) => setEditMusic({ ...editMusic, description: e.target.value })}
                     rows={4}
                     className="w-full px-3 py-2 bg-white/10 border-2 border-white/20 rounded-lg text-white placeholder-white/50 focus:ring-2 focus:ring-white/50 focus:border-white/40 outline-none text-sm resize-none transition-all"
-                    placeholder="输入关于这首歌的故事..."
+                    placeholder={t.about?.musicDescPlaceholder || '输入关于这首歌的故事...'}
                   />
                 </div>
               </div>
@@ -1034,14 +1034,14 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                     className="flex items-center px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all active:scale-95"
                   >
                     <Plus size={14} className="mr-1" />
-                    添加联系方式
+                    {t.about?.addContact || '添加联系方式'}
                   </button>
                 </div>
                 {editContacts.map((contact, index) => (
                   <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl space-y-3">
                     <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">类型</label>
+                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.contactType || '类型'}</label>
                         <select
                           value={contact.type}
                           onChange={(e) => {
@@ -1051,15 +1051,15 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                           }}
                           className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                         >
-                          <option value="wechat">微信</option>
-                          <option value="qq">QQ</option>
+                          <option value="wechat">{t.about?.contact_wechat || '微信'}</option>
+                          <option value="qq">{t.about?.contact_qq || 'QQ'}</option>
                           <option value="github">GitHub</option>
-                          <option value="email">邮箱</option>
+                          <option value="email">{t.about?.contact_email || '邮箱'}</option>
                           <option value="twitter">Twitter</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">标签</label>
+                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.contactLabel || '标签'}</label>
                         <input
                           type="text"
                           value={contact.label}
@@ -1074,7 +1074,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">内容</label>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.contactValue || '内容'}</label>
                       <input
                         type="text"
                         value={contact.value}
@@ -1093,14 +1093,14 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                         className="flex items-center px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95"
                       >
                         <Trash2 size={16} className="mr-1.5" />
-                        <span className="text-xs font-semibold">删除</span>
+                        <span className="text-xs font-semibold">{t.about?.delete || t.common.delete}</span>
                       </button>
                     </div>
                   </div>
                 ))}
                 {editContacts.length === 0 && (
                   <div className="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">
-                    暂无联系方式，点击上方"添加联系方式"按钮添加
+                    {t.about?.noContacts || '暂无联系方式，点击上方"添加联系方式"按钮添加'}
                   </div>
                 )}
               </div>
@@ -1147,63 +1147,63 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                     className="flex items-center px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all active:scale-95"
                   >
                     <Plus size={14} className="mr-1" />
-                    添加游戏
+                    {t.about?.addGame || '添加游戏'}
                   </button>
                 </div>
                 <div className="grid grid-cols-1 gap-3">
                   {editGames.map((game, index) => (
                     <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl space-y-3">
-                      <div className="flex items-start gap-2">
-                        <div className="flex-1 space-y-3">
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">游戏名称</label>
-                            <input
-                              type="text"
-                              value={game.name}
-                              onChange={(e) => {
-                                const updated = [...editGames];
-                                updated[index].name = e.target.value;
-                                setEditGames(updated);
-                              }}
-                              placeholder="例如：原神"
-                              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">图标链接</label>
-                            <input
-                              type="text"
-                              value={game.icon}
-                              onChange={(e) => {
-                                const updated = [...editGames];
-                                updated[index].icon = e.target.value;
-                                setEditGames(updated);
-                              }}
-                              placeholder="https://..."
-                              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">描述</label>
-                            <textarea
-                              value={game.quote}
-                              onChange={(e) => {
-                                const updated = [...editGames];
-                                updated[index].quote = e.target.value;
-                                setEditGames(updated);
-                              }}
-                              placeholder="输入游戏描述..."
-                              rows={2}
-                              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
-                            />
-                          </div>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.gameName || '游戏名称'}</label>
+                          <input
+                            type="text"
+                            value={game.name}
+                            onChange={(e) => {
+                              const updated = [...editGames];
+                              updated[index].name = e.target.value;
+                              setEditGames(updated);
+                            }}
+                            placeholder="例如：原神"
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                          />
                         </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.gameIcon || '图标链接'}</label>
+                          <input
+                            type="text"
+                            value={game.icon}
+                            onChange={(e) => {
+                              const updated = [...editGames];
+                              updated[index].icon = e.target.value;
+                              setEditGames(updated);
+                            }}
+                            placeholder="https://..."
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.gameQuote || '描述'}</label>
+                          <textarea
+                            value={game.quote}
+                            onChange={(e) => {
+                              const updated = [...editGames];
+                              updated[index].quote = e.target.value;
+                              setEditGames(updated);
+                            }}
+                            placeholder={t.about?.gameQuotePlaceholder || '输入游戏描述...'}
+                            rows={2}
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
                         <button
                           onClick={() => setEditGames(editGames.filter((_, i) => i !== index))}
                           className="flex items-center px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95"
                         >
                           <Trash2 size={16} className="mr-1.5" />
-                          <span className="text-xs font-semibold hidden sm:inline">删除</span>
+                          <span className="text-xs font-semibold">{t.about?.delete || t.common.delete}</span>
                         </button>
                       </div>
                     </div>
@@ -1211,7 +1211,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                 </div>
                 {editGames.length === 0 && (
                   <div className="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">
-                    暂无游戏，点击上方"添加游戏"按钮添加
+                    {t.about?.noGames || '暂无游戏，点击上方"添加游戏"按钮添加'}
                   </div>
                 )}
               </div>
