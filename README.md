@@ -28,6 +28,31 @@ A sleek, modern personal blog system driven by the GitHub API. ZenBlog uses a "S
 4. **Deploy**:
    Simply push your code to GitHub and enable GitHub Pages on the `main` branch (using the provided GitHub Action).
 
+## Custom Domain Support
+
+If you're using a custom domain (not `github.io`), you need to configure the repository information so visitors can access your blog data. You have two options:
+
+### Option 1: Meta Tag (Recommended)
+Edit `index.html` and uncomment the meta tag, then fill in your repository information:
+
+```html
+<meta name="zenblog-config" content='{"owner":"your-username","repo":"your-repo","branch":"data"}' />
+```
+
+This allows visitors to automatically discover your repository configuration when they first visit your site.
+
+### Option 2: URL Parameters
+You can also pass configuration via URL parameters:
+```
+https://your-domain.com/?owner=your-username&repo=your-repo&branch=data
+```
+
+**Note**: The configuration priority is:
+1. localStorage (if previously configured)
+2. Meta tag in HTML
+3. URL parameters
+4. Auto-detection from `github.io` domain
+
 ## License
 
 MIT

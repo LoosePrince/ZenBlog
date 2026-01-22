@@ -200,9 +200,45 @@ const App: React.FC = () => {
   });
 
   const [config, setConfig] = useState<GitHubConfig | null>(() => {
+    // 1. 优先从 localStorage 读取（管理员已配置）
     const saved = localStorage.getItem('zenblog_config');
     if (saved) return JSON.parse(saved);
     
+    // 2. 从 HTML meta 标签读取（支持自定义域名）
+    const metaConfig = document.querySelector('meta[name="zenblog-config"]');
+    if (metaConfig) {
+      try {
+        const configStr = metaConfig.getAttribute('content');
+        if (configStr) {
+          const parsed = JSON.parse(configStr);
+          if (parsed.owner && parsed.repo) {
+            return { 
+              token: '', 
+              owner: parsed.owner, 
+              repo: parsed.repo, 
+              branch: parsed.branch || 'data' 
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse meta config:', e);
+      }
+    }
+    
+    // 3. 从 URL 参数读取（方便测试和分享）
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlOwner = urlParams.get('owner');
+    const urlRepo = urlParams.get('repo');
+    if (urlOwner && urlRepo) {
+      return { 
+        token: '', 
+        owner: urlOwner, 
+        repo: urlRepo, 
+        branch: urlParams.get('branch') || 'data' 
+      };
+    }
+    
+    // 4. 从 github.io 域名推断（原有逻辑）
     const hostname = window.location.hostname;
     if (hostname.includes('github.io')) {
       const owner = hostname.split('.')[0];
@@ -210,6 +246,7 @@ const App: React.FC = () => {
       const repo = pathParts[0] || owner;
       return { token: '', owner, repo, branch: 'data' };
     }
+    
     return null;
   });
 
@@ -252,6 +289,22 @@ const App: React.FC = () => {
           service.getFile('data/posts.json'),
           service.getFile('data/profile.json')
         ]);
+
+        // 如果成功获取到 config.json，可以更新配置（但不覆盖 token）
+        if (results[0].status === 'fulfilled') {
+          try {
+            const publicConfig = JSON.parse(results[0].value.content);
+            // 只更新公共配置，保留本地 token
+            setConfig(prev => prev ? {
+              ...prev,
+              owner: publicConfig.owner || prev.owner,
+              repo: publicConfig.repo || prev.repo,
+              branch: publicConfig.branch || prev.branch
+            } : null);
+          } catch (e) {
+            // config.json 解析失败不影响其他数据加载
+          }
+        }
 
         if (results[1].status === 'fulfilled') {
           setPosts(JSON.parse(results[1].value.content));
