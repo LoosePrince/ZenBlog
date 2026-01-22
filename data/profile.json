@@ -196,5 +196,10 @@
         "quote": "Creeper? Aw man."
       }
     ]
+  },
+  "siteSettings": {
+    "siteName": "树梢的小窝",
+    "siteIcon": "https://q1.qlogo.cn/g?b=qq&nk=1377820366&s=640",
+    "siteDescription": ""
   }
 }
