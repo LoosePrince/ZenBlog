@@ -28,30 +28,38 @@ A sleek, modern personal blog system driven by the GitHub API. ZenBlog uses a "S
 4. **Deploy**:
    Simply push your code to GitHub and enable GitHub Pages on the `main` branch (using the provided GitHub Action).
 
-## Custom Domain Support
+## Configuration
 
-If you're using a custom domain (not `github.io`), you need to configure the repository information so visitors can access your blog data. You have two options:
+ZenBlog uses a configuration file (`config.json`) stored in the `main` branch (as a static file) to determine which repository to fetch data from. This allows visitors to automatically discover your blog configuration.
 
-### Option 1: Meta Tag (Recommended)
-Edit `index.html` and uncomment the meta tag, then fill in your repository information:
+### Initial Setup
 
-```html
-<meta name="zenblog-config" content='{"owner":"your-username","repo":"your-repo","branch":"data"}' />
-```
+1. **Configure in Settings**: Go to the Settings page and fill in:
+   - GitHub Personal Access Token (for write operations)
+   - Repository Owner
+   - Repository Name
+   - Data Branch (default: `data`)
 
-This allows visitors to automatically discover your repository configuration when they first visit your site.
+2. **Download config.json**: After saving, click the "下载 config.json" button to download the configuration file.
 
-### Option 2: URL Parameters
-You can also pass configuration via URL parameters:
-```
-https://your-domain.com/?owner=your-username&repo=your-repo&branch=data
-```
+3. **Deploy config.json**: Place the downloaded `config.json` file in the `public/` directory of your project.
 
-**Note**: The configuration priority is:
-1. localStorage (if previously configured)
-2. Meta tag in HTML
-3. URL parameters
-4. Auto-detection from `github.io` domain
+4. **Rebuild and Deploy**: Rebuild your project and deploy. The `config.json` will be included as a static file, and visitors can automatically access your blog data.
+
+### Configuration Priority
+
+The app loads configuration in the following order:
+
+1. **localStorage** (if previously configured by admin, includes token)
+2. **`/config.json`** (static file from `main` branch - **recommended for visitors**)
+3. **URL parameters** (for testing: `?owner=xxx&repo=xxx&branch=data`)
+4. **Auto-detection** (from `github.io` domain)
+
+### Custom Domain Support
+
+When using a custom domain, simply ensure `config.json` is in your `public/` directory. Visitors will automatically load the configuration from `/config.json` without any additional setup.
+
+**Note**: The `config.json` file only contains public information (owner, repo, branch). The GitHub token is stored only in localStorage and never committed to the repository.
 
 ## License
 

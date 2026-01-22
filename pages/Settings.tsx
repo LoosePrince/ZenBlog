@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Github, Save, CheckCircle, Database, ExternalLink, AlertTriangle, Layers, User, Settings as SettingsIcon } from 'lucide-react';
+import { Shield, Github, Save, CheckCircle, Database, ExternalLink, AlertTriangle, Layers, User, Settings as SettingsIcon, Download } from 'lucide-react';
 import { GitHubConfig, Profile } from '../types';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../App';
@@ -10,9 +10,10 @@ interface SettingsProps {
   onSaveConfig: (config: GitHubConfig) => Promise<void>;
   onSaveProfile: (profile: Profile) => Promise<void>;
   onSaveConfigAndProfile: (config: GitHubConfig, profile: Profile) => Promise<void>;
+  onDownloadConfig: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSaveProfile, onSaveConfigAndProfile }) => {
+const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSaveProfile, onSaveConfigAndProfile, onDownloadConfig }) => {
   const { t } = useLanguage();
   const [token, setToken] = useState(config?.token || '');
   const [owner, setOwner] = useState(config?.owner || '');
@@ -151,6 +152,19 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
                 />
                 <p className="mt-2 text-[10px] text-indigo-400 dark:text-indigo-500 font-bold uppercase tracking-widest italic">
                   {t.settings.branchHint}
+                </p>
+              </div>
+
+              <div className="md:col-span-2">
+                <button
+                  onClick={onDownloadConfig}
+                  className="w-full flex items-center justify-center px-4 md:px-6 py-2.5 md:py-3 border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg md:rounded-xl font-black hover:bg-gray-100 dark:hover:bg-gray-600 transition-all active:scale-95 uppercase tracking-widest text-xs"
+                >
+                  <Download size={16} className="mr-2" />
+                  下载 config.json（用于部署）
+                </button>
+                <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest">
+                  将下载的 config.json 放到 public 目录，重新构建部署后访客即可自动获取配置
                 </p>
               </div>
             </div>

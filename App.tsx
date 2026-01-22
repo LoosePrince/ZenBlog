@@ -58,6 +58,7 @@ const AppContent: React.FC<{
   posts: Post[];
   profile: Profile;
   config: GitHubConfig | null;
+  configLoading: boolean;
   loading: boolean;
   initError: string | null;
   handleSaveConfig: (c: GitHubConfig) => Promise<void>;
@@ -65,9 +66,10 @@ const AppContent: React.FC<{
   handleSaveConfigAndProfile: (c: GitHubConfig, p: Profile) => Promise<void>;
   handleSavePost: (p: Partial<Post>, c: string) => Promise<void>;
   handleDeletePost: (id: string) => Promise<void>;
+  handleDownloadConfig: () => void;
 }> = ({
-  isAdmin, onToggleAdmin, posts, profile, config, loading, initError,
-  handleSaveConfig, handleSaveProfile, handleSaveConfigAndProfile, handleSavePost, handleDeletePost
+  isAdmin, onToggleAdmin, posts, profile, config, configLoading, loading, initError,
+  handleSaveConfig, handleSaveProfile, handleSaveConfigAndProfile, handleSavePost, handleDeletePost, handleDownloadConfig
 }) => {
   const location = useLocation();
   const { t } = useLanguage();
@@ -103,7 +105,7 @@ const AppContent: React.FC<{
           </div>
         )}
 
-        {loading ? (
+        {(configLoading || loading) ? (
           <div className="flex flex-col items-center justify-center py-32">
             <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-6"></div>
             <p className="text-gray-400 font-medium tracking-widest uppercase text-xs">{t.common.loading}</p>
@@ -114,7 +116,7 @@ const AppContent: React.FC<{
               <Route path="/" element={<PageWrapper><Home posts={posts} profile={profile} isAdmin={isAdmin} /></PageWrapper>} />
               <Route path="/post/:id" element={<PageWrapper><PostDetail posts={posts} config={config} profile={profile} isAdmin={isAdmin} onDelete={handleDeletePost} /></PageWrapper>} />
               <Route path="/edit/:id" element={<PageWrapper><Editor posts={posts} config={config} onSave={handleSavePost} /></PageWrapper>} />
-              <Route path="/settings" element={<PageWrapper><Settings config={config} profile={profile} onSaveConfig={handleSaveConfig} onSaveProfile={handleSaveProfile} onSaveConfigAndProfile={handleSaveConfigAndProfile} /></PageWrapper>} />
+              <Route path="/settings" element={<PageWrapper><Settings config={config} profile={profile} onSaveConfig={handleSaveConfig} onSaveProfile={handleSaveProfile} onSaveConfigAndProfile={handleSaveConfigAndProfile} onDownloadConfig={handleDownloadConfig} /></PageWrapper>} />
               <Route path="/about" element={<PageWrapper><About profile={profile} /></PageWrapper>} />
             </Routes>
           </AnimatePresence>
@@ -199,59 +201,80 @@ const App: React.FC = () => {
     socials: {}
   });
 
-  const [config, setConfig] = useState<GitHubConfig | null>(() => {
-    // 1. 优先从 localStorage 读取（管理员已配置）
-    const saved = localStorage.getItem('zenblog_config');
-    if (saved) return JSON.parse(saved);
-    
-    // 2. 从 HTML meta 标签读取（支持自定义域名）
-    const metaConfig = document.querySelector('meta[name="zenblog-config"]');
-    if (metaConfig) {
-      try {
-        const configStr = metaConfig.getAttribute('content');
-        if (configStr) {
-          const parsed = JSON.parse(configStr);
-          if (parsed.owner && parsed.repo) {
-            return { 
-              token: '', 
-              owner: parsed.owner, 
-              repo: parsed.repo, 
-              branch: parsed.branch || 'data' 
-            };
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to parse meta config:', e);
-      }
-    }
-    
-    // 3. 从 URL 参数读取（方便测试和分享）
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlOwner = urlParams.get('owner');
-    const urlRepo = urlParams.get('repo');
-    if (urlOwner && urlRepo) {
-      return { 
-        token: '', 
-        owner: urlOwner, 
-        repo: urlRepo, 
-        branch: urlParams.get('branch') || 'data' 
-      };
-    }
-    
-    // 4. 从 github.io 域名推断（原有逻辑）
-    const hostname = window.location.hostname;
-    if (hostname.includes('github.io')) {
-      const owner = hostname.split('.')[0];
-      const pathParts = window.location.pathname.split('/').filter(p => p !== '');
-      const repo = pathParts[0] || owner;
-      return { token: '', owner, repo, branch: 'data' };
-    }
-    
-    return null;
-  });
-
+  const [config, setConfig] = useState<GitHubConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
+
+  // 从 /config.json 读取配置（main 分支中的静态文件）
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        // 1. 优先从 localStorage 读取（管理员已配置，包含 token）
+        const saved = localStorage.getItem('zenblog_config');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.owner && parsed.repo) {
+            setConfig(parsed);
+            setConfigLoading(false);
+            return;
+          }
+        }
+
+        // 2. 从 /config.json 读取（main 分支中的静态文件）
+        const response = await fetch('/config.json');
+        if (response.ok) {
+          const publicConfig = await response.json();
+          if (publicConfig.owner && publicConfig.repo) {
+            setConfig({
+              token: '', // token 只存在 localStorage
+              owner: publicConfig.owner,
+              repo: publicConfig.repo,
+              branch: publicConfig.branch || 'data'
+            });
+            setConfigLoading(false);
+            return;
+          }
+        }
+
+        // 3. 从 URL 参数读取（方便测试和分享）
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlOwner = urlParams.get('owner');
+        const urlRepo = urlParams.get('repo');
+        if (urlOwner && urlRepo) {
+          setConfig({
+            token: '',
+            owner: urlOwner,
+            repo: urlRepo,
+            branch: urlParams.get('branch') || 'data'
+          });
+          setConfigLoading(false);
+          return;
+        }
+
+        // 4. 从 github.io 域名推断（原有逻辑）
+        const hostname = window.location.hostname;
+        if (hostname.includes('github.io')) {
+          const owner = hostname.split('.')[0];
+          const pathParts = window.location.pathname.split('/').filter(p => p !== '');
+          const repo = pathParts[0] || owner;
+          setConfig({ token: '', owner, repo, branch: 'data' });
+          setConfigLoading(false);
+          return;
+        }
+
+        // 没有找到配置
+        setConfig(null);
+      } catch (err) {
+        console.warn('Failed to load config:', err);
+        setConfig(null);
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+
+    loadConfig();
+  }, []);
 
   // 动态更新favicon
   useEffect(() => {
@@ -275,6 +298,11 @@ const App: React.FC = () => {
       }
     };
 
+    // 等待配置加载完成
+    if (configLoading) {
+      return;
+    }
+
     const loadData = async () => {
       if (!config || !config.owner || !config.repo) {
         setLoading(false);
@@ -285,32 +313,15 @@ const App: React.FC = () => {
       try {
         const service = new GitHubService(config);
         const results = await Promise.allSettled([
-          service.getFile('data/config.json'),
           service.getFile('data/posts.json'),
           service.getFile('data/profile.json')
         ]);
 
-        // 如果成功获取到 config.json，可以更新配置（但不覆盖 token）
         if (results[0].status === 'fulfilled') {
-          try {
-            const publicConfig = JSON.parse(results[0].value.content);
-            // 只更新公共配置，保留本地 token
-            setConfig(prev => prev ? {
-              ...prev,
-              owner: publicConfig.owner || prev.owner,
-              repo: publicConfig.repo || prev.repo,
-              branch: publicConfig.branch || prev.branch
-            } : null);
-          } catch (e) {
-            // config.json 解析失败不影响其他数据加载
-          }
+          setPosts(JSON.parse(results[0].value.content));
         }
-
         if (results[1].status === 'fulfilled') {
-          setPosts(JSON.parse(results[1].value.content));
-        }
-        if (results[2].status === 'fulfilled') {
-          setProfile(JSON.parse(results[2].value.content));
+          setProfile(JSON.parse(results[1].value.content));
         }
         setInitError(null);
       } catch (err: any) {
@@ -324,33 +335,37 @@ const App: React.FC = () => {
     };
 
     loadData();
-  }, [config?.owner, config?.repo]);
+  }, [config?.owner, config?.repo, configLoading]);
 
   const handleSaveConfig = async (newConfig: GitHubConfig) => {
     localStorage.setItem('zenblog_config', JSON.stringify(newConfig));
     setConfig(newConfig);
+    toast.success(t.settings.syncLocal);
+  };
 
-    if (newConfig.token) {
-      const loadId = toast.loading(t.settings.saving);
-      try {
-        const service = new GitHubService(newConfig);
-        const publicConfig: PublicConfig = {
-          owner: newConfig.owner,
-          repo: newConfig.repo,
-          branch: newConfig.branch
-        };
-        await service.commitMultipleFiles('Sync config', [
-          { path: 'data/config.json', content: JSON.stringify(publicConfig, null, 2) }
-        ]);
-        setInitError(null);
-        toast.success(t.settings.syncSuccess, { id: loadId });
-      } catch (err: any) {
-        setInitError(`${t.settings.syncError}: ${err.message}`);
-        toast.error(`${t.settings.syncError}: ${err.message}`, { id: loadId });
-      }
-    } else {
-      toast.success(t.settings.syncLocal);
+  // 下载 config.json 文件（用于部署到 main 分支）
+  const handleDownloadConfig = () => {
+    if (!config || !config.owner || !config.repo) {
+      toast.error('请先配置仓库信息');
+      return;
     }
+
+    const publicConfig: PublicConfig = {
+      owner: config.owner,
+      repo: config.repo,
+      branch: config.branch || 'data'
+    };
+
+    const blob = new Blob([JSON.stringify(publicConfig, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'config.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('config.json 已下载，请将其放到 public 目录并重新构建部署');
   };
 
   const handleSaveProfile = async (newProfile: Profile) => {
@@ -385,29 +400,21 @@ const App: React.FC = () => {
 
     const isConfigChanged = JSON.stringify(oldPublicConfig) !== JSON.stringify(newPublicConfig);
     const isProfileChanged = JSON.stringify(profile) !== JSON.stringify(newProfile);
-    const hasChanges = isConfigChanged || isProfileChanged;
+    const hasChanges = isProfileChanged; // 配置变更需要重新下载 config.json
 
     // 2. 更新本地状态和存储
     localStorage.setItem('zenblog_config', JSON.stringify(newConfig));
     setConfig(newConfig);
     setProfile(newProfile);
 
-    // 3. 仅当有实质性变更且有Token时提交
-    if (newConfig.token && hasChanges) {
+    // 3. 仅当有实质性变更且有Token时提交到 data 分支
+    if (newConfig.token && isProfileChanged) {
       const loadId = toast.loading(t.settings.saving);
       try {
         const service = new GitHubService(newConfig);
-        const filesToUpdate = [];
-
-        if (isConfigChanged) {
-          filesToUpdate.push({ path: 'data/config.json', content: JSON.stringify(newPublicConfig, null, 2) });
-        }
-
-        if (isProfileChanged) {
-          filesToUpdate.push({ path: 'data/profile.json', content: JSON.stringify(newProfile, null, 2) });
-        }
-        
-        await service.commitMultipleFiles('Update settings', filesToUpdate);
+        await service.commitMultipleFiles('Update profile', [
+          { path: 'data/profile.json', content: JSON.stringify(newProfile, null, 2) }
+        ]);
         
         setInitError(null);
         toast.success(t.settings.syncSuccess, { id: loadId });
@@ -416,8 +423,12 @@ const App: React.FC = () => {
         toast.error(`${t.settings.syncError}: ${err.message}`, { id: loadId });
       }
     } else {
-      // 仅更新了Token或无变更，只提示本地保存
       toast.success(t.settings.syncLocal);
+    }
+
+    // 4. 如果配置变更，提示下载 config.json
+    if (isConfigChanged) {
+      toast.success('配置已保存，请下载 config.json 并重新部署', { duration: 5000 });
     }
   };
 
@@ -493,6 +504,7 @@ const App: React.FC = () => {
             posts={posts}
             profile={profile}
             config={config}
+            configLoading={configLoading}
             loading={loading}
             initError={initError}
             handleSaveConfig={handleSaveConfig}
@@ -500,6 +512,7 @@ const App: React.FC = () => {
             handleSaveConfigAndProfile={handleSaveConfigAndProfile}
             handleSavePost={handleSavePost}
             handleDeletePost={handleDeletePost}
+            handleDownloadConfig={handleDownloadConfig}
           />
         </Router>
       </LanguageContext.Provider>
