@@ -130,7 +130,7 @@ const AppContent: React.FC<{
               <Route path="/post/:id" element={<PageWrapper><PostDetail posts={posts} config={config} profile={profile} isAdmin={isAdmin} onDelete={handleDeletePost} /></PageWrapper>} />
               <Route path="/edit/:id" element={<PageWrapper><Editor posts={posts} config={config} onSave={handleSavePost} /></PageWrapper>} />
               <Route path="/settings" element={<PageWrapper><Settings config={config} profile={profile} onSaveConfig={handleSaveConfig} onSaveProfile={handleSaveProfile} onSaveConfigAndProfile={handleSaveConfigAndProfile} /></PageWrapper>} />
-              <Route path="/about" element={<PageWrapper><About profile={profile} isAdmin={isAdmin} onSave={handleSaveProfile} /></PageWrapper>} />
+              <Route path="/about" element={<PageWrapper><About profile={profile} isAdmin={isAdmin} config={config} onSave={handleSaveProfile} /></PageWrapper>} />
             </Routes>
           </AnimatePresence>
         )}
@@ -350,18 +350,21 @@ const App: React.FC = () => {
   };
 
   const handleSaveProfile = async (newProfile: Profile) => {
+    if (!config?.token) {
+      toast.error(t.settings.enterToken || '请先配置 GitHub Token');
+      throw new Error('未配置 Token');
+    }
     setProfile(newProfile);
-    if (config?.token) {
-      const loadId = toast.loading(t.common.syncing);
-      try {
-        const service = new GitHubService(config);
-        await service.commitMultipleFiles('Update profile', [
-          { path: 'data/profile.json', content: JSON.stringify(newProfile, null, 2) }
-        ]);
-        toast.success(t.settings.syncSuccess, { id: loadId });
-      } catch (err: any) {
-        toast.error(`${t.settings.syncError}: ${err.message}`, { id: loadId });
-      }
+    const loadId = toast.loading(t.common.syncing);
+    try {
+      const service = new GitHubService(config);
+      await service.commitMultipleFiles('Update profile', [
+        { path: 'data/profile.json', content: JSON.stringify(newProfile, null, 2) }
+      ]);
+      toast.success(t.settings.syncSuccess, { id: loadId });
+    } catch (err: any) {
+      toast.error(`${t.settings.syncError}: ${err.message}`, { id: loadId });
+      throw err;
     }
   };
 
@@ -381,15 +384,20 @@ const App: React.FC = () => {
 
     const isConfigChanged = JSON.stringify(oldPublicConfig) !== JSON.stringify(newPublicConfig);
     const isProfileChanged = JSON.stringify(profile) !== JSON.stringify(newProfile);
-    const hasChanges = isProfileChanged; // 配置变更需要重新下载 config.json
 
-    // 2. 更新本地状态和存储
+    // 2. 如果保存 profile 但没有 token，则不允许
+    if (isProfileChanged && !newConfig.token) {
+      toast.error(t.settings.enterToken || '请先配置 GitHub Token');
+      throw new Error('未配置 Token');
+    }
+
+    // 3. 更新本地状态和存储（仅保存 config，profile 需要 token）
     localStorage.setItem('zenblog_config', JSON.stringify(newConfig));
     setConfig(newConfig);
-    setProfile(newProfile);
-
-    // 3. 仅当有实质性变更且有Token时提交到 data 分支
+    
+    // 4. 如果有 token 且有 profile 变更，更新 profile 并提交到云端
     if (newConfig.token && isProfileChanged) {
+      setProfile(newProfile);
       const loadId = toast.loading(t.settings.saving);
       try {
         const service = new GitHubService(newConfig);
@@ -402,14 +410,15 @@ const App: React.FC = () => {
       } catch (err: any) {
         setInitError(`${t.settings.syncError}: ${err.message}`);
         toast.error(`${t.settings.syncError}: ${err.message}`, { id: loadId });
+        throw err;
       }
+    } else if (isProfileChanged) {
+      // 如果没有 token 但有 profile 变更，不允许保存
+      toast.error(t.settings.enterToken || '请先配置 GitHub Token');
+      throw new Error('未配置 Token');
     } else {
+      // 仅保存 config（token），不涉及 profile
       toast.success(t.settings.syncLocal);
-    }
-
-    // 4. 如果配置变更，提示下载 config.json
-    if (isConfigChanged) {
-      toast.success('配置已保存，请下载 config.json 并重新部署', { duration: 5000 });
     }
   };
 

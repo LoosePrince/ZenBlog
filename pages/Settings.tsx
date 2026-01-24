@@ -3,6 +3,7 @@ import { Shield, Github, Save, CheckCircle, Database, ExternalLink, AlertTriangl
 import { GitHubConfig, Profile } from '../types';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../App';
+import toast from 'react-hot-toast';
 
 interface SettingsProps {
   config: GitHubConfig | null;
@@ -55,6 +56,10 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
 
   // 保存个人资料（name、bio、avatar、socials）
   const handleSaveProfile = async () => {
+    if (!config?.token) {
+      toast.error(t.settings.enterToken);
+      return;
+    }
     setSavingProfile(true);
     try {
       await onSaveProfile({
@@ -71,6 +76,10 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
 
   // 保存站点设置
   const handleSaveSiteSettings = async () => {
+    if (!config?.token) {
+      toast.error(t.settings.enterToken);
+      return;
+    }
     setSavingSiteSettings(true);
     try {
       await onSaveProfile({

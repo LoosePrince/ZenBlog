@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Github, Twitter, Mail, Heart, Code, Coffee, Sparkles, BookOpen, Palette, Brain, MessageCircle, Copy, Check, Play, Pause, User, Music as MusicIcon, Gamepad2, Briefcase, ChevronDown, Edit3, Save, X, Plus, Trash2 } from 'lucide-react';
-import { Profile, Interest, SkillCategory, Work, Music, Contact, Game } from '../types';
+import { Profile, Interest, SkillCategory, Work, Music, Contact, Game, GitHubConfig } from '../types';
 import { useLanguage } from '../App';
 import { toast } from 'react-hot-toast';
 
 interface AboutProps {
   profile: Profile;
   isAdmin?: boolean;
+  config?: GitHubConfig | null;
   onSave?: (profile: Profile) => Promise<void>;
 }
 
@@ -68,7 +69,7 @@ const TEMPLATE_GAMES: Game[] = [
   },
 ];
 
-const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
+const About: React.FC<AboutProps> = ({ profile, isAdmin = false, config, onSave }) => {
   const { t } = useLanguage();
   const [activeSkillTab, setActiveSkillTab] = useState<string>('design');
   const [copiedText, setCopiedText] = useState('');
@@ -177,6 +178,10 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
   // 保存函数
   const handleSave = async () => {
     if (!onSave) return;
+    if (!config?.token) {
+      toast.error(t.settings?.enterToken || '请先配置 GitHub Token');
+      return;
+    }
     setSaving(true);
     try {
       const updatedProfile: Profile = {

@@ -107,7 +107,7 @@ export const translations = {
       games_quote: '如果你也对这些游戏感兴趣的话，欢迎来找我玩！',
       music: '我的音乐',
       music_tip: '点击播放器体验完整版',
-      music_about: '有关《明天你好》这首歌',
+      music_about: '有关这首歌',
       hide_story: '收起',
       now_playing: '正在播放',
       music_story1: '这首歌是我在5年级的时候听的，当时我还在上小学，这首歌的旋律和歌词在那时让我产生了一种很奇妙的感觉',
