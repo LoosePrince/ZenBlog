@@ -2,7 +2,7 @@
   {
     "id": "062zh2o69",
     "title": "ZenBlog - 现代化 Git 驱动博客系统",
-    "excerpt": "\nA sleek, modern personal blog system driven by the GitHub API. ZenBlog uses a \"Storage-Compute Separation\" architecture, where your code lives on the...",
+    "excerpt": "一款由 GitHub API 驱动的优雅现代个人博客系统。ZenBlog 采用\"存储计算分离\"架构，您的代码存放在 `main` 分支，而内容则存储在干净独立的 `data` 分支。\n\n## 核心特性\n\n- **独立存储**：数据提交到专用的 `data` 分支，保持 `main` 分支整洁\n- *...",
     "category": "随笔",
     "date": "2026-01-22T11:02:54.274Z",
     "contentPath": "posts/062zh2o69.md"
