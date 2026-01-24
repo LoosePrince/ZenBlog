@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Save, ArrowLeft, Loader2, Eye, FileText, Tag, Calendar, Sparkles, X, Settings, ChevronDown, ChevronUp, Clock, Type } from 'lucide-react';
 import { Post, GitHubConfig } from '../types';
 import { GitHubService } from '../services/githubService';
-import { useLanguage, useTheme } from '../App';
+import { useLanguage, useTheme, formatDate } from '../App';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -18,7 +18,7 @@ interface EditorProps {
 const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { effectiveTheme } = useTheme();
   const isNew = id === 'new';
   const isDark = effectiveTheme === 'dark';
@@ -312,7 +312,9 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
                    <Clock size={16} className="mr-2 opacity-50" />
                    {t.editor.readTime || '阅读时长'}
                  </div>
-                 <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{estimatedReadTime} min</span>
+                 <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">
+                   {estimatedReadTime} {t.editor.minute}
+                 </span>
                </div>
 
                <div className="w-full h-[1px] bg-indigo-200 dark:bg-indigo-800/50"></div>
@@ -323,7 +325,7 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
                    {t.editor.date || '日期'}
                  </div>
                  <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
-                   {new Date().toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
+                   {formatDate(new Date(), 'editor', language)}
                  </span>
                </div>
              </div>
@@ -352,8 +354,12 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
 
           {/* 统计信息简略 */}
           <div className="flex flex-col items-center">
-             <span className="text-xs font-bold text-gray-900 dark:text-gray-100">{wordCount} 字</span>
-             <span className="text-[10px] text-gray-400 dark:text-gray-500">{estimatedReadTime} 分钟阅读</span>
+             <span className="text-xs font-bold text-gray-900 dark:text-gray-100">
+               {wordCount} {t.editor.wordCount}
+             </span>
+             <span className="text-[10px] text-gray-400 dark:text-gray-500">
+               {estimatedReadTime} {t.post.minRead}
+             </span>
           </div>
 
           {/* 保存按钮 */}

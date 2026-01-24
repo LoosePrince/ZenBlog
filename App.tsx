@@ -41,6 +41,20 @@ export const useTheme = () => {
   return context;
 };
 
+// 日期格式化工具函数
+export const formatDate = (date: string | Date, format: 'full' | 'short' | 'editor', language: Language = 'zh'): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const locale = language === 'zh' ? 'zh-CN' : 'en-US';
+  
+  if (format === 'full') {
+    return dateObj.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
+  } else if (format === 'short') {
+    return dateObj.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  } else {
+    return dateObj.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  }
+};
+
 const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <motion.div
     initial={{ opacity: 0, y: 10 }}
@@ -401,7 +415,6 @@ const App: React.FC = () => {
 
   const handleSavePost = async (postData: Partial<Post>, content: string) => {
     if (!config?.token) throw new Error('未配置 Token');
-    const loadId = toast.loading(t.editor.saving);
     try {
       const service = new GitHubService(config);
       const id = postData.id!;
@@ -428,9 +441,9 @@ const App: React.FC = () => {
 
       await service.commitMultipleFiles(`Post: ${postData.title}`, changes);
       setPosts(updatedPosts);
-      toast.success(t.editor.saveSuccess, { id: loadId });
+      // Toast 消息由 Editor 组件处理，避免重复显示
     } catch (err: any) {
-      toast.error(`${t.editor.saveError}: ${err.message}`, { id: loadId });
+      // 错误会传播到 Editor 组件处理
       throw err;
     }
   };

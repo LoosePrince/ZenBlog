@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Calendar, ChevronRight, Edit3, ArrowRight } from 'lucide-react';
 import { Post } from '../types';
 import { motion } from 'framer-motion';
-import { useLanguage } from '../App';
+import { useLanguage, formatDate } from '../App';
 
 interface PostCardProps {
   post: Post;
@@ -11,7 +11,7 @@ interface PostCardProps {
 }
 
 const PostCard: React.FC<PostCardProps> = ({ post, isAdmin }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   return (
     <motion.div 
@@ -44,7 +44,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, isAdmin }) => {
       <div className="flex items-center justify-between mt-auto pt-6 border-t border-gray-50 dark:border-gray-700">
         <div className="flex items-center text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-tighter">
           <Calendar size={14} className="mr-1.5 opacity-50" />
-          {new Date(post.date).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}
+          {formatDate(post.date, 'full', language)}
         </div>
         <Link 
           to={`/post/${post.id}`} 

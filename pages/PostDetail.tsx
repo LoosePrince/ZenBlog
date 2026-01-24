@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { Post, GitHubConfig, Profile } from '../types';
 import { GitHubService } from '../services/githubService';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLanguage, useTheme } from '../App';
+import { useLanguage, useTheme, formatDate } from '../App';
 import toast from 'react-hot-toast';
 
 interface PostDetailProps {
@@ -20,7 +20,7 @@ interface PostDetailProps {
 const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin, onDelete }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { effectiveTheme } = useTheme();
   const [content, setContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -149,8 +149,8 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
             <div className="h-1 w-1 rounded-full bg-gray-200 dark:bg-gray-700 hidden sm:block"></div>
             <div className="flex items-center text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-tight">
               <Calendar size={14} className="mr-1.5" />
-              <span className="hidden sm:inline">{new Date(post.date).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-              <span className="sm:hidden">{new Date(post.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}</span>
+              <span className="hidden sm:inline">{formatDate(post.date, 'full', language)}</span>
+              <span className="sm:hidden">{formatDate(post.date, 'short', language)}</span>
             </div>
             <div className="h-1 w-1 rounded-full bg-gray-200 dark:bg-gray-700"></div>
             <div className="flex items-center text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-tight">
