@@ -9,6 +9,10 @@ A sleek, modern personal blog system driven by the GitHub API. ZenBlog uses a "S
 - **Markdown First**: High-quality post rendering with support for GFM.
 - **Modern UI**: Built with React, Tailwind CSS, Framer Motion, and Lucide Icons.
 - **Zero Backend**: Fully serverless, powered entirely by the GitHub Git API.
+- **Editable About Page**: Fully customizable about page with interests, skills, works, music, contacts, and games.
+- **Site Settings**: Configure site name, icon, and description.
+- **Internationalization**: Support for Chinese and English.
+- **Theme Support**: Light, dark, and auto theme modes.
 
 ## Getting Started
 
@@ -23,7 +27,8 @@ A sleek, modern personal blog system driven by the GitHub API. ZenBlog uses a "S
    ```
 
 3. **Configure**:
-   Go to the **Settings** page in the app, provide your GitHub Personal Access Token (PAT), and configure your repository details.
+   - Create a `config.json` file in the `public/` directory (see Configuration section below)
+   - Go to the **Settings** page in the app and provide your GitHub Personal Access Token (PAT)
 
 4. **Deploy**:
    Simply push your code to GitHub and enable GitHub Pages on the `main` branch (using the provided GitHub Action).
@@ -34,19 +39,46 @@ ZenBlog uses a configuration file (`config.json`) stored in the `main` branch (a
 
 ### Initial Setup
 
-1. **Configure in Settings**: Go to the Settings page and fill in:
-   - GitHub Personal Access Token (for write operations)
-   - Repository Owner
-   - Repository Name
-   - Data Branch (default: `data`)
+1. **Create config.json**: Create a `config.json` file in the `public/` directory with the following structure:
+   ```json
+   {
+     "owner": "your-github-username",
+     "repo": "your-repo-name",
+     "branch": "data"
+   }
+   ```
 
-2. **Download config.json**: After saving, click the "下载 config.json" button to download the configuration file.
+2. **Deploy config.json**: The `config.json` file will be included as a static file when you build and deploy your project. Visitors can automatically access your blog data from `/config.json`.
 
-3. **Deploy config.json**: Place the downloaded `config.json` file in the `public/` directory of your project.
+3. **Configure Token**: Go to the **Settings** page in the app and provide your GitHub Personal Access Token (PAT) for write operations. The token is stored only in localStorage and never committed to the repository.
 
-4. **Rebuild and Deploy**: Rebuild your project and deploy. The `config.json` will be included as a static file in the `main` branch, and visitors can automatically access your blog data from `/config.json`.
+**Note**: 
+- The `config.json` file only contains public information (owner, repo, branch).
+- Repository Owner, Repository Name, and Data Branch fields in Settings are read-only and display the values from `config.json`.
+- The GitHub token is stored only in localStorage and never committed to the repository.
 
-**Note**: The `config.json` file only contains public information (owner, repo, branch). The GitHub token is stored only in localStorage and never committed to the repository.
+### Settings Overview
+
+The Settings page includes three main sections:
+
+1. **GitHub Storage Configuration**:
+   - Personal Access Token (editable, stored locally)
+   - Repository Owner (read-only, from config.json)
+   - Repository Name (read-only, from config.json)
+   - Data Branch (read-only, from config.json)
+
+2. **Author Profile**:
+   - Display Name
+   - Bio
+   - Avatar URL
+   - GitHub URL
+
+3. **Site Settings**:
+   - Site Name (used in page title and navbar)
+   - Site Icon (used as favicon)
+   - Site Description (used for SEO meta description)
+
+All profile and site settings are saved to `data/profile.json` in the data branch.
 
 ## License
 
