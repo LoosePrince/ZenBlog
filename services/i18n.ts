@@ -173,7 +173,10 @@ export const translations = {
       gameIcon: '图标链接',
       gameQuote: '描述',
       gameQuotePlaceholder: '输入游戏描述...',
+      gameAbout: '关于',
+      gameAboutPlaceholder: '输入关于这个游戏的详细介绍...',
       noGames: '暂无游戏，点击上方"添加游戏"按钮添加',
+      noGameInfo: '暂无详细信息',
       atLeastOneCategory: '至少需要保留一个分类',
     },
     settings: {
@@ -410,7 +413,10 @@ export const translations = {
       gameIcon: 'Icon URL',
       gameQuote: 'Description',
       gameQuotePlaceholder: 'Enter game description...',
+      gameAbout: 'About',
+      gameAboutPlaceholder: 'Enter detailed information about this game...',
       noGames: 'No games yet, click "Add Game" above to add',
+      noGameInfo: 'No detailed information',
       atLeastOneCategory: 'At least one category must be kept',
     },
     settings: {

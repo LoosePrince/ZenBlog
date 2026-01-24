@@ -63,7 +63,8 @@ const TEMPLATE_GAMES: Game[] = [
   {
     name: 'Minecraft',
     icon: 'https://www.minecraft.net/content/dam/minecraftnet/franchise/logos/Homepage_Download-Launcher_Creeper-Logo_500x500.png',
-    quote: '示例：一句你想写的短描述（鼠标悬停可见）',
+    quote: '示例：一句你想写的短描述',
+    about: '示例：关于这个游戏的详细介绍...',
   },
 ];
 
@@ -112,6 +113,8 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
   const [editGames, setEditGames] = useState<Game[]>(
     profile.about?.games ?? TEMPLATE_GAMES
   );
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [showGameModal, setShowGameModal] = useState(false);
 
   // 当profile更新时，同步编辑状态
   useEffect(() => {
@@ -309,7 +312,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`sticky top-20 z-40 mb-6 ${isEditing ? 'bg-indigo-50 dark:bg-indigo-900/20 border-2 border-indigo-200 dark:border-indigo-800 rounded-2xl p-4 shadow-lg' : ''}`}
+          className={`sticky top-20 z-40 mb-6 ${isEditing ? 'bg-indigo-50/80 dark:bg-indigo-900/40 backdrop-blur-md border-2 border-indigo-200/50 dark:border-indigo-800/50 rounded-2xl p-4 shadow-lg' : ''}`}
         >
           {!isEditing ? (
             <div className="flex justify-end">
@@ -1143,7 +1146,7 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
               <div className="space-y-4">
                 <div className="flex justify-end">
                   <button
-                    onClick={() => setEditGames([...editGames, { name: '', icon: '', quote: '' }])}
+                    onClick={() => setEditGames([...editGames, { name: '', icon: '', quote: '', about: '' }])}
                     className="flex items-center px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all active:scale-95"
                   >
                     <Plus size={14} className="mr-1" />
@@ -1196,6 +1199,20 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                             className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
                           />
                         </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{t.about?.gameAbout || '关于'}</label>
+                          <textarea
+                            value={game.about || ''}
+                            onChange={(e) => {
+                              const updated = [...editGames];
+                              updated[index].about = e.target.value;
+                              setEditGames(updated);
+                            }}
+                            placeholder={t.about?.gameAboutPlaceholder || '输入关于这个游戏的详细介绍...'}
+                            rows={4}
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
+                          />
+                        </div>
                       </div>
                       <div className="flex justify-end">
                         <button
@@ -1216,16 +1233,97 @@ const About: React.FC<AboutProps> = ({ profile, isAdmin = false, onSave }) => {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-3">
-                {games.map((game, index) => (
-                  <div key={index} className="group relative aspect-square rounded-xl overflow-hidden cursor-pointer bg-gray-100 dark:bg-gray-700">
-                    <img src={game.icon} alt={game.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
-                      <p className="text-[10px] text-white font-bold text-center line-clamp-3">{game.quote}</p>
+              <>
+                <div className="grid grid-cols-3 gap-3">
+                  {games.map((game, index) => (
+                    <div 
+                      key={index} 
+                      onClick={() => {
+                        setSelectedGame(game);
+                        setShowGameModal(true);
+                      }}
+                      className="group relative aspect-square rounded-xl overflow-hidden cursor-pointer bg-gray-100 dark:bg-gray-700"
+                    >
+                      <img src={game.icon} alt={game.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                        <p className="text-sm text-white font-bold text-center">{game.name}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                
+                {/* 游戏详情模态窗 */}
+                <AnimatePresence>
+                  {showGameModal && selectedGame && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                      onClick={() => setShowGameModal(false)}
+                    >
+                      <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.9, opacity: 0 }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+                      >
+                        {/* 模态窗头部 */}
+                        <div className="relative p-6 border-b border-gray-200 dark:border-gray-700">
+                          <button
+                            onClick={() => setShowGameModal(false)}
+                            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                          >
+                            <X size={20} />
+                          </button>
+                          <div className="flex items-center space-x-4">
+                            <img 
+                              src={selectedGame.icon} 
+                              alt={selectedGame.name}
+                              className="w-16 h-16 rounded-xl object-cover border-2 border-gray-200 dark:border-gray-700"
+                            />
+                            <div>
+                              <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100">
+                                {selectedGame.name}
+                              </h3>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* 模态窗内容 */}
+                        <div className="p-6 overflow-y-auto flex-1">
+                          {selectedGame.quote && (
+                            <div className="mb-6">
+                              <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">
+                                {t.about?.gameQuote || '描述'}
+                              </h4>
+                              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                                {selectedGame.quote}
+                              </p>
+                            </div>
+                          )}
+                          {selectedGame.about && (
+                            <div>
+                              <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">
+                                {t.about?.gameAbout || '关于'}
+                              </h4>
+                              <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+                                {selectedGame.about}
+                              </p>
+                            </div>
+                          )}
+                          {!selectedGame.quote && !selectedGame.about && (
+                            <p className="text-gray-400 dark:text-gray-500 text-center py-8">
+                              {t.about?.noGameInfo || '暂无详细信息'}
+                            </p>
+                          )}
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
             )}
           </motion.div>
 

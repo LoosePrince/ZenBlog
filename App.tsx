@@ -98,13 +98,13 @@ const AppContent: React.FC<{
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mb-8 p-6 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-3xl border border-indigo-200 flex flex-col md:flex-row items-center justify-between"
+              className="mb-8 p-6 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-3xl border border-indigo-200 dark:border-indigo-800 flex flex-col md:flex-row items-center justify-between"
             >
               <div className="mb-4 md:mb-0">
-                <h3 className="text-xl font-bold text-indigo-700">存算分离模式已就绪</h3>
-                <p className="text-gray-600">请配置 Token，数据将自动存储在专用的 <b>data</b> 分支。</p>
+                <h3 className="text-xl font-bold text-indigo-700 dark:text-indigo-300">存算分离模式已就绪</h3>
+                <p className="text-gray-600 dark:text-gray-300">请配置 Token，数据将自动存储在专用的 <b>data</b> 分支。</p>
               </div>
-              <Link to="/settings" className="px-6 py-2 border-2 border-indigo-300 bg-white text-indigo-600 rounded-xl font-bold hover:bg-indigo-50 transition-all active:scale-95">
+              <Link to="/settings" className="px-6 py-2 border-2 border-indigo-300 dark:border-indigo-700 bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 rounded-xl font-bold hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-95">
                 {t.nav.settings}
               </Link>
             </motion.div>

@@ -53,6 +53,7 @@ export interface Game {
   name: string;
   icon: string; // 图标链接
   quote: string; // 描述
+  about?: string; // 关于
 }
 
 export interface AboutData {
