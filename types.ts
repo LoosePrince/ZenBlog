@@ -104,6 +104,26 @@ export interface FileChange {
   content: string;
 }
 
+export interface BinaryFileChange {
+  path: string;
+  contentBase64: string;
+}
+
+/** 文章内嵌入的文件块（与 data-zenfile div 属性对应） */
+export interface ZenFileBlock {
+  uuid: string;
+  name: string;
+  caption?: string;
+  mime: string;
+}
+
+/** 编辑器内部未上传文件状态 */
+export interface EditorFileState {
+  localId: string;
+  file: File;
+  previewUrl: string;
+}
+
 export interface AppState {
   posts: Post[];
   profile: Profile;

@@ -78,7 +78,7 @@ const AppContent: React.FC<{
   handleSaveConfig: (c: GitHubConfig) => Promise<void>;
   handleSaveProfile: (p: Profile) => Promise<void>;
   handleSaveConfigAndProfile: (c: GitHubConfig, p: Profile) => Promise<void>;
-  handleSavePost: (p: Partial<Post>, c: string) => Promise<void>;
+  handleSavePost: (p: Partial<Post>, c: string, options?: { pendingFiles?: Array<{ localId: string; file: File }>; onProgress?: (current: number, total: number) => void; signal?: AbortSignal }) => Promise<void>;
   handleDeletePost: (id: string) => Promise<void>;
 }> = ({
   isAdmin, onToggleAdmin, posts, profile, config, configLoading, loading, initError,
@@ -422,39 +422,79 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSavePost = async (postData: Partial<Post>, content: string) => {
-    if (!config?.token) throw new Error('未配置 Token');
-    try {
-      const service = new GitHubService(config);
-      const id = postData.id!;
-      const contentPath = `posts/${id}.md`;
-      
-      const updatedPosts = [...posts];
-      const index = updatedPosts.findIndex(p => p.id === id);
-      const newPost: Post = {
-        id,
-        title: postData.title!,
-        excerpt: postData.excerpt!,
-        category: postData.category!,
-        date: postData.date || (index > -1 ? posts[index].date : new Date().toISOString()),
-        contentPath,
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.includes(',') ? result.split(',')[1]! : result;
+        resolve(base64);
       };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
 
-      if (index > -1) updatedPosts[index] = newPost;
-      else updatedPosts.unshift(newPost);
+  const handleSavePost = async (
+    postData: Partial<Post>,
+    content: string,
+    options?: { pendingFiles?: Array<{ localId: string; file: File }>; onProgress?: (current: number, total: number) => void; signal?: AbortSignal }
+  ) => {
+    if (!config?.token) throw new Error('未配置 Token');
+    const { pendingFiles = [], onProgress, signal } = options ?? {};
+    const service = new GitHubService(config);
+    const id = postData.id!;
+    const contentPath = `posts/${id}.md`;
 
-      const changes: FileChange[] = [
-        { path: contentPath, content },
-        { path: 'data/posts.json', content: JSON.stringify(updatedPosts, null, 2) }
-      ];
+    const updatedPosts = [...posts];
+    const index = updatedPosts.findIndex((p) => p.id === id);
+    const newPost: Post = {
+      id,
+      title: postData.title!,
+      excerpt: postData.excerpt!,
+      category: postData.category!,
+      date: postData.date || (index > -1 ? posts[index].date : new Date().toISOString()),
+      contentPath,
+    };
+    if (index > -1) updatedPosts[index] = newPost;
+    else updatedPosts.unshift(newPost);
 
-      await service.commitMultipleFiles(`Post: ${postData.title}`, changes);
-      setPosts(updatedPosts);
-      // Toast 消息由 Editor 组件处理，避免重复显示
-    } catch (err: any) {
-      // 错误会传播到 Editor 组件处理
-      throw err;
+    let finalContent = content;
+    const binaryChanges: { path: string; contentBase64: string }[] = [];
+    const totalSteps = pendingFiles.length + 1;
+    let step = 0;
+
+    if (pendingFiles.length > 0) {
+      const localIdToUuid: Record<string, string> = {};
+      for (const { localId, file } of pendingFiles) {
+        if (signal?.aborted) throw new Error('已取消上传');
+        const uuid = crypto.randomUUID?.() ?? `f${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+        localIdToUuid[localId] = uuid;
+        const contentBase64 = await fileToBase64(file);
+        binaryChanges.push({ path: `data/files/${uuid}`, contentBase64 });
+        step += 1;
+        onProgress?.(step, totalSteps);
+      }
+      finalContent = content.replace(
+        /data-uuid="(local-[^"]+)"/g,
+        (_, localId) => `data-uuid="${localIdToUuid[localId] ?? localId}"`
+      );
     }
+
+    if (signal?.aborted) throw new Error('已取消上传');
+    step += 1;
+    onProgress?.(step, totalSteps);
+
+    const textChanges: FileChange[] = [
+      { path: contentPath, content: finalContent },
+      { path: 'data/posts.json', content: JSON.stringify(updatedPosts, null, 2) },
+    ];
+
+    if (binaryChanges.length > 0) {
+      await service.commitWithBlobs(`Post: ${postData.title}`, textChanges, binaryChanges);
+    } else {
+      await service.commitMultipleFiles(`Post: ${postData.title}`, textChanges);
+    }
+    setPosts(updatedPosts);
   };
 
   const handleDeletePost = async (id: string) => {

@@ -78,6 +78,11 @@ export const translations = {
         essay: '随笔',
         tutorial: '教程',
       },
+      insertFile: '插入文件',
+      uploadingProgress: '上传中 ({{current}}/{{total}})',
+      cancelUpload: '取消上传',
+      download: '下载',
+      fileCaption: '标注',
     },
     about: {
       welcome: '客官，里面请',
@@ -228,6 +233,7 @@ export const translations = {
       syncing: '同步中',
       cancel: '取消',
       delete: '删除',
+      download: '下载',
     },
     date: {
       locale: 'zh-CN',
@@ -318,6 +324,11 @@ export const translations = {
         essay: 'Essay',
         tutorial: 'Tutorial',
       },
+      insertFile: 'Insert File',
+      uploadingProgress: 'Uploading ({{current}}/{{total}})',
+      cancelUpload: 'Cancel upload',
+      download: 'Download',
+      fileCaption: 'Caption',
     },
     about: {
       welcome: 'Step Inside',
@@ -468,6 +479,7 @@ export const translations = {
       syncing: 'Syncing',
       cancel: 'Cancel',
       delete: 'Delete',
+      download: 'Download',
     },
     date: {
       locale: 'en-US',

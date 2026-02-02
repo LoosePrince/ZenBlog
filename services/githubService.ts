@@ -1,4 +1,4 @@
-import { GitHubConfig, FileChange } from '../types';
+import { GitHubConfig, FileChange, BinaryFileChange } from '../types';
 
 export class GitHubService {
   private config: Partial<GitHubConfig>;
@@ -22,12 +22,29 @@ export class GitHubService {
     return response.json();
   }
 
-  // 获取文件内容（读取 data 分支）
+  // 获取文件内容（读取 data 分支，仅文本）
   async getFile(path: string): Promise<{ content: string; sha: string }> {
     const branch = this.config.branch || 'data';
     const data = await this.request(`contents/${path}?ref=${branch}`);
     const content = decodeURIComponent(escape(atob(data.content)));
     return { content, sha: data.sha };
+  }
+
+  // 获取文件为 Base64（用于二进制：图片、音视频、文档等）
+  async getFileAsBase64(path: string): Promise<{ contentBase64: string; sha: string }> {
+    const branch = this.config.branch || 'data';
+    const data = await this.request(`contents/${path}?ref=${branch}`);
+    return { contentBase64: data.content, sha: data.sha };
+  }
+
+  // 创建 Git blob（用于二进制文件）
+  async createBlob(content: string, encoding: 'utf-8' | 'base64'): Promise<{ sha: string }> {
+    if (!this.config.token) throw new Error('操作需要 GitHub Token');
+    const body = await this.request(`git/blobs`, {
+      method: 'POST',
+      body: JSON.stringify({ content, encoding }),
+    });
+    return { sha: body.sha };
   }
 
   // 获取文件的最后提交者信息
@@ -51,8 +68,17 @@ export class GitHubService {
     }
   }
 
-  // 原子化：一次性提交多个文件变更
+  // 原子化：一次性提交多个文件变更（仅文本）
   async commitMultipleFiles(message: string, changes: FileChange[]): Promise<void> {
+    return this.commitWithBlobs(message, changes, []);
+  }
+
+  // 一次性提交文本 + 二进制文件（先 createBlob 再构建 tree）
+  async commitWithBlobs(
+    message: string,
+    textChanges: FileChange[],
+    binaryChanges: BinaryFileChange[]
+  ): Promise<void> {
     if (!this.config.token) throw new Error('操作需要 GitHub Token');
     const branchName = this.config.branch || 'data';
 
@@ -65,46 +91,60 @@ export class GitHubService {
       const commitData = await this.request(`git/commits/${latestCommitSha}`);
       const baseTreeSha = commitData.tree.sha;
 
-      // 3. 为每个文件变更创建 Tree 节点
-      const treeItems = changes.map(change => ({
-        path: change.path,
-        mode: '100644', // 普通文本文件
-        type: 'blob',
-        content: change.content
-      }));
+      // 3. 为每个二进制文件创建 blob，得到 sha
+      const binaryShas: { path: string; sha: string }[] = [];
+      for (const bc of binaryChanges) {
+        const { sha } = await this.createBlob(bc.contentBase64, 'base64');
+        binaryShas.push({ path: bc.path, sha });
+      }
 
-      // 4. 创建新的 Tree
+      // 4. 构建 tree：文本用 content，二进制用 sha
+      const treeItems: Array<{ path: string; mode: string; type: string; content?: string; sha?: string }> = [
+        ...textChanges.map((change) => ({
+          path: change.path,
+          mode: '100644',
+          type: 'blob',
+          content: change.content,
+        })),
+        ...binaryShas.map(({ path, sha }) => ({
+          path,
+          mode: '100644',
+          type: 'blob',
+          sha,
+        })),
+      ];
+
+      // 5. 创建新的 Tree
       const newTreeData = await this.request(`git/trees`, {
         method: 'POST',
         body: JSON.stringify({
           base_tree: baseTreeSha,
-          tree: treeItems
-        })
+          tree: treeItems,
+        }),
       });
 
-      // 5. 创建新的 Commit
+      // 6. 创建新的 Commit
       const newCommitData = await this.request(`git/commits`, {
         method: 'POST',
         body: JSON.stringify({
           message,
           tree: newTreeData.sha,
-          parents: [latestCommitSha]
-        })
+          parents: [latestCommitSha],
+        }),
       });
 
-      // 6. 更新分支引用
+      // 7. 更新分支引用
       await this.request(`git/refs/heads/${branchName}`, {
         method: 'PATCH',
         body: JSON.stringify({
           sha: newCommitData.sha,
-          force: false
-        })
+          force: false,
+        }),
       });
     } catch (err: any) {
-      // 如果分支不存在，尝试创建孤儿分支（仅针对初始化）
       if (err.message.includes('Not Found') && branchName === 'data') {
         await this.createDataBranch();
-        return this.commitMultipleFiles(message, changes); // 重试
+        return this.commitWithBlobs(message, textChanges, binaryChanges);
       }
       throw err;
     }

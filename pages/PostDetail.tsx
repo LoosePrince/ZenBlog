@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, ArrowLeft, Loader2, Edit3, Trash2, Clock, Share2, Check, AlertTriangle, X } from 'lucide-react';
+import { Calendar, ArrowLeft, Loader2, Edit3, Trash2, Clock, Share2, AlertTriangle, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Post, GitHubConfig, Profile } from '../types';
@@ -8,6 +8,8 @@ import { GitHubService } from '../services/githubService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage, useTheme, formatDate } from '../App';
 import toast from 'react-hot-toast';
+import { parseContentToSegments, getFileRawUrl, type ContentSegment } from '../utils/zenfile';
+import FileBlockView from '../components/FileBlockView';
 
 interface PostDetailProps {
   posts: Post[];
@@ -27,6 +29,9 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   const [error, setError] = useState<string | null>(null);
   const [author, setAuthor] = useState<{ name: string; avatar: string; username: string } | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
+  const [fileTxtPreviews, setFileTxtPreviews] = useState<Record<string, string>>({});
+  const [fileProgress, setFileProgress] = useState<{ loaded: number; total: number }>({ loaded: 0, total: 0 });
 
   const isDark = effectiveTheme === 'dark';
 
@@ -58,6 +63,71 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
 
     fetchContent();
   }, [id, post, config, t]);
+
+  const segments = useMemo(() => parseContentToSegments(content), [content]);
+
+  useEffect(() => {
+    if (!config || !post) {
+      setFileProgress({ loaded: 0, total: 0 });
+      return;
+    }
+    const fileSegments = segments.filter((s): s is ContentSegment & { type: 'file' } => s.type === 'file');
+    if (fileSegments.length === 0) {
+      setFileProgress({ loaded: 0, total: 0 });
+      return;
+    }
+    const service = new GitHubService(config);
+    const owner = config.owner;
+    const repo = config.repo;
+    const branch = config.branch || 'data';
+    let cancelled = false;
+    const load = async () => {
+      const urls: Record<string, string> = {};
+      const txtPreviews: Record<string, string> = {};
+      setFileProgress({ loaded: 0, total: fileSegments.length });
+      let loaded = 0;
+      for (const seg of fileSegments) {
+        if (cancelled) break;
+        const { uuid, mime } = seg.value;
+        if (uuid.startsWith('local-')) continue;
+        try {
+          const path = `data/files/${uuid}`;
+          // 优先使用 GitHub raw URL，保证音频/视频正常支持 Range 与时长
+          urls[uuid] = getFileRawUrl(owner, repo, branch, path);
+          if (mime === 'text/plain') {
+            const { contentBase64 } = await service.getFileAsBase64(path);
+            const binary = Uint8Array.from(atob(contentBase64), (c) => c.charCodeAt(0));
+            const text = new TextDecoder().decode(binary).slice(0, 1024);
+            txtPreviews[uuid] = text;
+          }
+        } catch {
+          // leave url empty, FileBlockView will show placeholder
+        } finally {
+          loaded += 1;
+          setFileProgress((prev) =>
+            prev.total === 0 ? prev : { loaded: Math.min(loaded, prev.total), total: prev.total }
+          );
+        }
+      }
+      if (!cancelled) {
+        setFileUrls((prev) => {
+          Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
+          return urls;
+        });
+        setFileTxtPreviews(txtPreviews);
+        setFileProgress((prev) => ({ loaded: prev.total, total: prev.total }));
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+      setFileUrls((prev) => {
+        Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
+        return {};
+      });
+      setFileProgress({ loaded: 0, total: 0 });
+    };
+  }, [config, post, segments]);
 
   const handleDeleteClick = () => {
     setShowDeleteModal(true);
@@ -128,6 +198,31 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   }
 
   const readingTime = Math.ceil(content.length / 500) || 1;
+  const mdComponents: Parameters<typeof ReactMarkdown>[0]['components'] = {
+    h1: (props) => <h1 style={{ fontSize: '1.75rem', fontWeight: '900', color: isDark ? '#f3f4f6' : '#111827', marginTop: '2rem', marginBottom: '1rem', lineHeight: '1.2' }} {...props} />,
+    h2: (props) => <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: isDark ? '#f3f4f6' : '#111827', marginTop: '1.75rem', marginBottom: '0.875rem', lineHeight: '1.3' }} {...props} />,
+    h3: (props) => <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: isDark ? '#e5e7eb' : '#111827', marginTop: '1.5rem', marginBottom: '0.75rem', lineHeight: '1.4' }} {...props} />,
+    p: (props) => <p style={{ marginBottom: '1.25rem', lineHeight: '1.75' }} {...props} />,
+    ul: (props) => <ul style={{ marginBottom: '1.25rem', paddingLeft: '1.5rem', listStyleType: 'disc' }} {...props} />,
+    ol: (props) => <ol style={{ marginBottom: '1.25rem', paddingLeft: '1.5rem', listStyleType: 'decimal' }} {...props} />,
+    li: (props) => <li style={{ marginBottom: '0.5rem' }} {...props} />,
+    blockquote: (props) => <blockquote style={{ borderLeft: `4px solid ${isDark ? '#818cf8' : '#6366f1'}`, paddingLeft: '1rem', fontStyle: 'italic', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '1.25rem' }} {...props} />,
+    code: ({ className, children, ...props }) => {
+      const isInline = !className;
+      return isInline ? (
+        <code style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6', color: isDark ? '#e5e7eb' : '#1f2937', padding: '0.125rem 0.375rem', borderRadius: '0.25rem', fontSize: '0.875em', fontFamily: 'monospace' }} {...props}>{children}</code>
+      ) : (
+        <code style={{ display: 'block', backgroundColor: isDark ? '#1f2937' : '#f8fafc', color: isDark ? '#e5e7eb' : '#334155', padding: '1rem', borderRadius: '0.5rem', overflow: 'auto', fontSize: '0.875rem', fontFamily: 'monospace', marginBottom: '1.25rem', border: `1px solid ${isDark ? '#374151' : '#e2e8f0'}` }} {...props}>{children}</code>
+      );
+    },
+    pre: (props) => <pre style={{ marginBottom: '1.25rem' }} {...props} />,
+    a: (props) => <a style={{ color: isDark ? '#818cf8' : '#6366f1', textDecoration: 'underline', fontWeight: '500' }} {...props} />,
+    img: (props) => <img style={{ borderRadius: '1rem', boxShadow: isDark ? '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', marginTop: '1.5rem', marginBottom: '1.5rem', maxWidth: '100%' }} {...props} />,
+    table: (props) => <div style={{ overflowX: 'auto', marginBottom: '1.25rem' }}><table style={{ width: '100%', borderCollapse: 'collapse' }} {...props} /></div>,
+    th: (props) => <th style={{ border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`, padding: '0.75rem', backgroundColor: isDark ? '#1f2937' : '#f9fafb', fontWeight: '600', textAlign: 'left' }} {...props} />,
+    td: (props) => <td style={{ border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`, padding: '0.75rem' }} {...props} />,
+    hr: (props) => <hr style={{ border: 'none', borderTop: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`, marginTop: '2rem', marginBottom: '2rem' }} {...props} />,
+  };
 
   return (
     <article className="max-w-4xl mx-auto">
@@ -218,36 +313,28 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
           color: isDark ? '#9ca3af' : '#4b5563',
         }}
       >
-        <ReactMarkdown 
-          remarkPlugins={[remarkGfm]}
-          components={{
-            h1: ({node, ...props}) => <h1 style={{ fontSize: '1.75rem', fontWeight: '900', color: isDark ? '#f3f4f6' : '#111827', marginTop: '2rem', marginBottom: '1rem', lineHeight: '1.2' }} {...props} />,
-            h2: ({node, ...props}) => <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: isDark ? '#f3f4f6' : '#111827', marginTop: '1.75rem', marginBottom: '0.875rem', lineHeight: '1.3' }} {...props} />,
-            h3: ({node, ...props}) => <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: isDark ? '#e5e7eb' : '#111827', marginTop: '1.5rem', marginBottom: '0.75rem', lineHeight: '1.4' }} {...props} />,
-            p: ({node, ...props}) => <p style={{ marginBottom: '1.25rem', lineHeight: '1.75' }} {...props} />,
-            ul: ({node, ...props}) => <ul style={{ marginBottom: '1.25rem', paddingLeft: '1.5rem', listStyleType: 'disc' }} {...props} />,
-            ol: ({node, ...props}) => <ol style={{ marginBottom: '1.25rem', paddingLeft: '1.5rem', listStyleType: 'decimal' }} {...props} />,
-            li: ({node, ...props}) => <li style={{ marginBottom: '0.5rem' }} {...props} />,
-            blockquote: ({node, ...props}) => <blockquote style={{ borderLeft: `4px solid ${isDark ? '#818cf8' : '#6366f1'}`, paddingLeft: '1rem', fontStyle: 'italic', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '1.25rem' }} {...props} />,
-            code: ({node, className, children, ...props}) => {
-              const isInline = !className;
-              return isInline ? (
-                <code style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6', color: isDark ? '#e5e7eb' : '#1f2937', padding: '0.125rem 0.375rem', borderRadius: '0.25rem', fontSize: '0.875em', fontFamily: 'monospace' }} {...props}>{children}</code>
-              ) : (
-                <code style={{ display: 'block', backgroundColor: isDark ? '#1f2937' : '#f8fafc', color: isDark ? '#e5e7eb' : '#334155', padding: '1rem', borderRadius: '0.5rem', overflow: 'auto', fontSize: '0.875rem', fontFamily: 'monospace', marginBottom: '1.25rem', border: `1px solid ${isDark ? '#374151' : '#e2e8f0'}` }} {...props}>{children}</code>
-              );
-            },
-            pre: ({node, ...props}) => <pre style={{ marginBottom: '1.25rem' }} {...props} />,
-            a: ({node, ...props}) => <a style={{ color: isDark ? '#818cf8' : '#6366f1', textDecoration: 'underline', fontWeight: '500' }} {...props} />,
-            img: ({node, ...props}) => <img style={{ borderRadius: '1rem', boxShadow: isDark ? '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', marginTop: '1.5rem', marginBottom: '1.5rem', maxWidth: '100%' }} {...props} />,
-            table: ({node, ...props}) => <div style={{ overflowX: 'auto', marginBottom: '1.25rem' }}><table style={{ width: '100%', borderCollapse: 'collapse' }} {...props} /></div>,
-            th: ({node, ...props}) => <th style={{ border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`, padding: '0.75rem', backgroundColor: isDark ? '#1f2937' : '#f9fafb', fontWeight: '600', textAlign: 'left' }} {...props} />,
-            td: ({node, ...props}) => <td style={{ border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`, padding: '0.75rem' }} {...props} />,
-            hr: ({node, ...props}) => <hr style={{ border: 'none', borderTop: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`, marginTop: '2rem', marginBottom: '2rem' }} {...props} />,
-          }}
-        >
-          {content}
-        </ReactMarkdown>
+        {fileProgress.total > 0 && fileProgress.loaded < fileProgress.total && (
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+            <span>
+              附件加载中 ({fileProgress.loaded}/{fileProgress.total})
+            </span>
+          </div>
+        )}
+        {segments.map((seg, index) =>
+          seg.type === 'markdown' ? (
+            <ReactMarkdown key={index} remarkPlugins={[remarkGfm]} components={mdComponents}>
+              {seg.value}
+            </ReactMarkdown>
+          ) : (
+            <FileBlockView
+              key={index}
+              block={seg.value}
+              fileUrl={fileUrls[seg.value.uuid] ?? null}
+              txtPreview={seg.value.mime === 'text/plain' ? (fileTxtPreviews[seg.value.uuid] ?? null) : undefined}
+            />
+          )
+        )}
       </motion.div>
 
       <footer className="mt-16 md:mt-20 pt-10 border-t border-gray-100 dark:border-gray-800">
