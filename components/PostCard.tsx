@@ -12,10 +12,6 @@ interface PostCardProps {
 
 const PostCard: React.FC<PostCardProps> = ({ post, isAdmin }) => {
   const { t, language } = useLanguage();
-
-  const categoryLabel =
-    (t.editor.categories as any)[post.category as keyof typeof t.editor.categories] ??
-    post.category;
   
   return (
     <motion.div 
@@ -24,7 +20,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, isAdmin }) => {
     >
       <div className="flex justify-between items-start mb-6">
         <span className="px-4 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-black rounded-full uppercase tracking-widest">
-          {categoryLabel}
+          {post.category}
         </span>
         {isAdmin && (
           <Link 

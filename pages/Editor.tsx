@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, ArrowLeft, Loader2, Eye, FileText, Calendar, Settings, ChevronDown, Clock, Type } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Eye, FileText, Calendar, Settings, Clock, Type } from 'lucide-react';
 import { Post, GitHubConfig, EditorFileState } from '../types';
 import { GitHubService } from '../services/githubService';
 import { useLanguage, useTheme, formatDate } from '../App';
@@ -34,7 +34,7 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
 
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
-  const [category, setCategory] = useState(t.editor.categories.life);
+  const [category, setCategory] = useState('');
   const [content, setContent] = useState('');
   const [fileStates, setFileStates] = useState<Record<string, EditorFileState>>({});
   const [saving, setSaving] = useState(false);
@@ -407,19 +407,13 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
                 <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">
                   {t.editor.category}
                 </label>
-                <div className="relative">
-                  <select 
-                    value={category} 
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none text-sm font-bold appearance-none cursor-pointer"
-                  >
-                    <option>{t.editor.categories.life}</option>
-                    <option>{t.editor.categories.tech}</option>
-                    <option>{t.editor.categories.essay}</option>
-                    <option>{t.editor.categories.tutorial}</option>
-                  </select>
-                  <ChevronDown size={16} className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-                </div>
+                <input
+                  type="text"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder={t.editor.category}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none text-sm font-bold"
+                />
               </div>
 
               <div>
@@ -545,16 +539,13 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
                   <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">
                     {t.editor.category}
                   </label>
-                  <select 
-                    value={category} 
+                  <input
+                    type="text"
+                    value={category}
                     onChange={(e) => setCategory(e.target.value)}
+                    placeholder={t.editor.category}
                     className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none text-sm font-bold"
-                  >
-                    <option>{t.editor.categories.life}</option>
-                    <option>{t.editor.categories.tech}</option>
-                    <option>{t.editor.categories.essay}</option>
-                    <option>{t.editor.categories.tutorial}</option>
-                  </select>
+                  />
                 </div>
 
                 <div>
