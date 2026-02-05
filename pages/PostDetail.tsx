@@ -239,7 +239,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
         >
           <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-6">
             <span className="px-4 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-black rounded-full uppercase tracking-widest">
-              {post.category}
+              {(t.editor.categories as any)[post.category as keyof typeof t.editor.categories] ?? post.category}
             </span>
             <div className="h-1 w-1 rounded-full bg-gray-200 dark:bg-gray-700 hidden sm:block"></div>
             <div className="flex items-center text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-tight">
