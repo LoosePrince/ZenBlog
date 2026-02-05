@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import toast from 'react-hot-toast';
-import { parseContentToSegments } from '../utils/zenfile';
+import { parseContentToSegments, getFileRawUrl, type ContentSegment } from '../utils/zenfile';
 import FileBlockEditor from '../components/FileBlockEditor';
 import FileBlockView from '../components/FileBlockView';
 import InsertFileButton from '../components/InsertFileButton';
@@ -42,6 +42,7 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
   const [previewMode, setPreviewMode] = useState(false);
   const [showMobileSettings, setShowMobileSettings] = useState(false);
   const [uploadModal, setUploadModal] = useState<{ current: number; total: number } | null>(null);
+  const [previewFileUrls, setPreviewFileUrls] = useState<Record<string, string>>({});
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -67,6 +68,31 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
     };
     fetchContent();
   }, [id, posts, config, isNew, navigate, t.editor.loadError]);
+
+  useEffect(() => {
+    if (!config) {
+      setPreviewFileUrls({});
+      return;
+    }
+    const parsed = parseContentToSegments(content);
+    const fileSegments = parsed.filter(
+      (s): s is ContentSegment & { type: 'file' } => s.type === 'file'
+    );
+    if (fileSegments.length === 0) {
+      setPreviewFileUrls({});
+      return;
+    }
+    const owner = config.owner;
+    const repo = config.repo;
+    const branch = config.branch || 'data';
+    const urls: Record<string, string> = {};
+    for (const seg of fileSegments) {
+      const { uuid } = seg.value;
+      if (uuid.startsWith('local-')) continue;
+      urls[uuid] = getFileRawUrl(owner, repo, branch, `data/files/${uuid}`);
+    }
+    setPreviewFileUrls(urls);
+  }, [config, content]);
 
   const escapeAttr = (s: string) =>
     s.replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -353,7 +379,7 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
                     <FileBlockView
                       key={index}
                       block={seg.value}
-                      fileUrl={fileStates[seg.value.uuid]?.previewUrl ?? null}
+                      fileUrl={fileStates[seg.value.uuid]?.previewUrl ?? previewFileUrls[seg.value.uuid] ?? null}
                     />
                   )
                 )}

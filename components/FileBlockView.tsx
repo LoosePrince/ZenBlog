@@ -30,6 +30,35 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
   const category = getMimeCategory(block.mime);
   const label = block.caption || block.name;
 
+  const handleDownloadClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!fileUrl) return;
+
+    // 对于本地 blob/data URL，浏览器会根据 download 属性正确使用文件名
+    if (fileUrl.startsWith('blob:') || fileUrl.startsWith('data:')) {
+      return;
+    }
+
+    try {
+      e.preventDefault();
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error('Failed to download file');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = block.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // 回退到直接打开链接，避免完全失败
+      window.open(fileUrl, '_blank');
+    }
+  };
+
   if (!fileUrl) {
     return (
       <div className="my-4 flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-6 bg-gray-50 dark:bg-gray-800/50">
@@ -88,6 +117,7 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
           <a
             href={fileUrl}
             download={block.name}
+            onClick={handleDownloadClick}
             className="flex-shrink-0 px-3 py-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
           >
             下载
