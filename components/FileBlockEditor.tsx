@@ -36,7 +36,7 @@ const FileBlockEditor: React.FC<FileBlockEditorProps> = ({
   const { t } = useLanguage();
   const isDark = effectiveTheme === 'dark';
   const category = getMimeCategory(block.mime);
-  const label = block.caption || block.name;
+  const label = block.caption ?? null;
   const downloadLabel = t.common.download || t.editor.download;
 
   const wrapperClass =
@@ -59,7 +59,7 @@ const FileBlockEditor: React.FC<FileBlockEditorProps> = ({
         {deleteButton}
         <File className="w-10 h-10 text-gray-400 dark:text-gray-500 mb-2" aria-hidden />
         <p className="text-sm text-gray-500 dark:text-gray-400">{block.name}</p>
-        <Caption text={label} />
+        {label && <Caption text={label} />}
       </div>
     );
   }
@@ -70,10 +70,10 @@ const FileBlockEditor: React.FC<FileBlockEditorProps> = ({
         {deleteButton}
         <img
           src={previewUrl}
-          alt={block.name}
+          alt={block.caption || block.name}
           className="rounded-xl max-w-full mx-auto block w-full"
         />
-        <Caption text={label} />
+        {label && <Caption text={label} />}
       </figure>
     );
   }
@@ -83,9 +83,9 @@ const FileBlockEditor: React.FC<FileBlockEditorProps> = ({
       <div className={wrapperClass}>
         {deleteButton}
         <div className="p-4 pt-10">
-          <audio controls src={previewUrl} className="w-full max-w-md mx-auto block" aria-label={block.name} />
+          <audio controls src={previewUrl} className="w-full max-w-md mx-auto block" aria-label={block.caption || block.name} />
         </div>
-        <Caption text={label} />
+        {label && <Caption text={label} />}
       </div>
     );
   }
@@ -95,9 +95,9 @@ const FileBlockEditor: React.FC<FileBlockEditorProps> = ({
       <div className={wrapperClass}>
         {deleteButton}
         <div className="p-4 pt-10">
-          <video controls src={previewUrl} className="rounded-xl max-w-full mx-auto block" aria-label={block.name} />
+          <video controls src={previewUrl} className="rounded-xl max-w-full mx-auto block" aria-label={block.caption || block.name} />
         </div>
-        <Caption text={label} />
+        {label && <Caption text={label} />}
       </div>
     );
   }
@@ -127,7 +127,7 @@ const FileBlockEditor: React.FC<FileBlockEditorProps> = ({
           </pre>
         )}
         <div className="px-4 py-2">
-          <Caption text={label} />
+          {label && <Caption text={label} />}
         </div>
       </div>
     );
@@ -136,7 +136,7 @@ const FileBlockEditor: React.FC<FileBlockEditorProps> = ({
   return (
     <div className={wrapperClass}>
       {deleteButton}
-      <Caption text={label} />
+      {label && <Caption text={label} />}
     </div>
   );
 };

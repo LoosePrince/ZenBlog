@@ -29,7 +29,7 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
   const { t } = useLanguage();
   const isDark = effectiveTheme === 'dark';
   const category = getMimeCategory(block.mime);
-  const label = block.caption || block.name;
+  const label = block.caption ?? null;
 
   const downloadLabel = t.common.download || t.editor.download;
 
@@ -67,7 +67,7 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
       <div className="my-4 flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-6 bg-gray-50 dark:bg-gray-800/50">
         <File className="w-10 h-10 text-gray-400 dark:text-gray-500 mb-2" aria-hidden />
         <p className="text-sm text-gray-500 dark:text-gray-400">{block.name}</p>
-        <Caption text={label} />
+        {label && <Caption text={label} />}
       </div>
     );
   }
@@ -91,10 +91,10 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
         </div>
         <img
           src={fileUrl}
-          alt={block.name}
+          alt={block.caption || block.name}
           className="rounded-xl shadow-lg max-w-full mx-auto block"
         />
-        <Caption text={label} />
+        {label && <Caption text={label} />}
       </figure>
     );
   }
@@ -120,10 +120,10 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
           controls
           src={fileUrl}
           className="w-full max-w-md mx-auto block"
-          aria-label={block.name}
+          aria-label={block.caption || block.name}
           controlsList="nodownload"
         />
-        <Caption text={label} />
+        {label && <Caption text={label} />}
       </div>
     );
   }
@@ -149,10 +149,10 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
           controls
           src={fileUrl}
           className="rounded-xl max-w-full mx-auto block"
-          aria-label={block.name}
+          aria-label={block.caption || block.name}
           controlsList="nodownload"
         />
-        <Caption text={label} />
+        {label && <Caption text={label} />}
       </div>
     );
   }
@@ -186,7 +186,7 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
           </pre>
         )}
         <div className="px-4 py-2">
-          <Caption text={label} />
+          {label && <Caption text={label} />}
         </div>
       </div>
     );
@@ -194,7 +194,7 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
 
   return (
     <div className="my-4">
-      <Caption text={label} />
+      {label && <Caption text={label} />}
     </div>
   );
 };

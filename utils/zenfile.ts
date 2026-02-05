@@ -10,9 +10,12 @@ function parseAttributes(attrString: string): ZenFileBlock | null {
   const uuid = attrString.match(/data-uuid="([^"]*)"/)?.[1];
   const name = attrString.match(/data-name="([^"]*)"/)?.[1];
   const caption = attrString.match(/data-caption="([^"]*)"/)?.[1];
+  const alt = attrString.match(/\balt="([^"]*)"/)?.[1];
+  const title = attrString.match(/\btitle="([^"]*)"/)?.[1];
   const mime = attrString.match(/data-mime="([^"]*)"/)?.[1];
   if (!uuid || !name || !mime) return null;
-  return { uuid, name, caption: caption ?? undefined, mime };
+  const resolvedCaption = caption ?? alt ?? title;
+  return { uuid, name, caption: resolvedCaption ?? undefined, mime };
 }
 
 /**
