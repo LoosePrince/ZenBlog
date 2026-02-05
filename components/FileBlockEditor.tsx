@@ -1,7 +1,7 @@
 import React from 'react';
 import { FileText, Image, Music, Film, File, Trash2 } from 'lucide-react';
 import type { ZenFileBlock } from '../types';
-import { useTheme } from '../App';
+import { useTheme, useLanguage } from '../App';
 
 interface FileBlockEditorProps {
   block: ZenFileBlock;
@@ -33,9 +33,11 @@ const FileBlockEditor: React.FC<FileBlockEditorProps> = ({
   onDelete,
 }) => {
   const { effectiveTheme } = useTheme();
+  const { t } = useLanguage();
   const isDark = effectiveTheme === 'dark';
   const category = getMimeCategory(block.mime);
   const label = block.caption || block.name;
+  const downloadLabel = t.common.download || t.editor.download;
 
   const wrapperClass =
     'my-4 rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden relative group';
@@ -116,7 +118,7 @@ const FileBlockEditor: React.FC<FileBlockEditorProps> = ({
             download={block.name}
             className="flex-shrink-0 px-3 py-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
           >
-            下载
+            {downloadLabel}
           </a>
         </div>
         {isTxt && txtPreview != null && txtPreview.length > 0 && (

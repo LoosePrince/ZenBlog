@@ -1,7 +1,7 @@
 import React from 'react';
 import { FileText, Image, Music, Film, File } from 'lucide-react';
 import type { ZenFileBlock } from '../types';
-import { useTheme } from '../App';
+import { useTheme, useLanguage } from '../App';
 
 interface FileBlockViewProps {
   block: ZenFileBlock;
@@ -26,11 +26,14 @@ const Caption: React.FC<{ text: string }> = ({ text }) => (
 
 const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPreview }) => {
   const { effectiveTheme } = useTheme();
+  const { t } = useLanguage();
   const isDark = effectiveTheme === 'dark';
   const category = getMimeCategory(block.mime);
   const label = block.caption || block.name;
 
-  const handleDownloadClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const downloadLabel = t.common.download || t.editor.download;
+
+  const handleDownload = async (e?: React.MouseEvent<HTMLAnchorElement>) => {
     if (!fileUrl) return;
 
     // 对于本地 blob/data URL，浏览器会根据 download 属性正确使用文件名
@@ -39,7 +42,7 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
     }
 
     try {
-      e.preventDefault();
+      if (e) e.preventDefault();
       const response = await fetch(fileUrl);
       if (!response.ok) {
         throw new Error('Failed to download file');
@@ -72,6 +75,20 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
   if (category === 'image') {
     return (
       <figure className="my-4" aria-label={block.name}>
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Image className="w-5 h-5 text-indigo-500 dark:text-indigo-400 flex-shrink-0" aria-hidden />
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{block.name}</span>
+          </div>
+          <a
+            href={fileUrl}
+            download={block.name}
+            onClick={handleDownload}
+            className="flex-shrink-0 px-3 py-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+          >
+            {downloadLabel}
+          </a>
+        </div>
         <img
           src={fileUrl}
           alt={block.name}
@@ -85,7 +102,27 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
   if (category === 'audio') {
     return (
       <div className="my-4">
-        <audio controls src={fileUrl} className="w-full max-w-md mx-auto block" aria-label={block.name} />
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Music className="w-5 h-5 text-indigo-500 dark:text-indigo-400 flex-shrink-0" aria-hidden />
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{block.name}</span>
+          </div>
+          <a
+            href={fileUrl}
+            download={block.name}
+            onClick={handleDownload}
+            className="flex-shrink-0 px-3 py-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+          >
+            {downloadLabel}
+          </a>
+        </div>
+        <audio
+          controls
+          src={fileUrl}
+          className="w-full max-w-md mx-auto block"
+          aria-label={block.name}
+          controlsList="nodownload"
+        />
         <Caption text={label} />
       </div>
     );
@@ -94,7 +131,27 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
   if (category === 'video') {
     return (
       <div className="my-4">
-        <video controls src={fileUrl} className="rounded-xl max-w-full mx-auto block" aria-label={block.name} />
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Film className="w-5 h-5 text-indigo-500 dark:text-indigo-400 flex-shrink-0" aria-hidden />
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{block.name}</span>
+          </div>
+          <a
+            href={fileUrl}
+            download={block.name}
+            onClick={handleDownload}
+            className="flex-shrink-0 px-3 py-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+          >
+            {downloadLabel}
+          </a>
+        </div>
+        <video
+          controls
+          src={fileUrl}
+          className="rounded-xl max-w-full mx-auto block"
+          aria-label={block.name}
+          controlsList="nodownload"
+        />
         <Caption text={label} />
       </div>
     );
@@ -117,10 +174,10 @@ const FileBlockView: React.FC<FileBlockViewProps> = ({ block, fileUrl, txtPrevie
           <a
             href={fileUrl}
             download={block.name}
-            onClick={handleDownloadClick}
+            onClick={handleDownload}
             className="flex-shrink-0 px-3 py-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
           >
-            下载
+            {downloadLabel}
           </a>
         </div>
         {isTxt && txtPreview != null && txtPreview.length > 0 && (
