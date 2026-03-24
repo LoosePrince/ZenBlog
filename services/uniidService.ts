@@ -228,6 +228,10 @@ export class UniIdService {
     await this.init();
     if (!this.sdk?._fetch) return;
     const targetSchema = {
+      autoFill: {
+        createdAt: '$serverTimeMs',
+        updatedAt: '$serverTimeMs',
+      },
       type: 'object',
       additionalProperties: false,
       required: ['postId', 'content', 'status', 'author', 'parentCommentId', 'rootCommentId', 'depth', 'createdAt', 'updatedAt'],
@@ -311,7 +315,6 @@ export class UniIdService {
     if (!this.sdk?.create) {
       throw new Error('UniID SDK 数据接口不可用');
     }
-    const now = Date.now();
     const permissions = {
       default: {
         read: ['$public', '$app_admin'],
@@ -339,8 +342,6 @@ export class UniIdService {
         parentCommentId: payload.parentCommentId,
         rootCommentId: payload.rootCommentId,
         depth: payload.depth,
-        createdAt: now,
-        updatedAt: now,
       },
       permissions
     );
@@ -351,7 +352,7 @@ export class UniIdService {
     if (!this.sdk?.update) {
       throw new Error('UniID SDK 数据接口不可用');
     }
-    await this.sdk.update(commentId, { status, updatedAt: Date.now() });
+    await this.sdk.update(commentId, { status });
   }
 }
 
