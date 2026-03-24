@@ -41,8 +41,8 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [uniIdConfig, setUniIdConfig] = useState<{ authServer: string; appId: string }>({
-    authServer: 'http://localhost:3000',
-    appId: 'cmn4fv9zd0003yjt3mp6wmgr9',
+    authServer: '',
+    appId: '',
   });
 
   const isDark = effectiveTheme === 'dark';
@@ -104,9 +104,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
         if (cfg.uniid?.authServer && cfg.uniid?.appId) {
           setUniIdConfig({ authServer: cfg.uniid.authServer, appId: cfg.uniid.appId });
         }
-      } catch {
-        // keep fallback
-      }
+      } catch {}
     };
     loadPublicConfig();
   }, []);

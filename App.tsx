@@ -14,11 +14,6 @@ import { GitHubService } from './services/githubService';
 import { UniIdService } from './services/uniidService';
 import { translations, Language } from './services/i18n';
 
-const FALLBACK_UNIID_CONFIG = {
-  authServer: 'http://localhost:3000',
-  appId: 'cmn4fv9zd0003yjt3mp6wmgr9',
-};
-
 export type Theme = 'light' | 'dark' | 'auto';
 
 interface LanguageContextType {
@@ -190,7 +185,10 @@ const App: React.FC = () => {
     uniIdToken: null,
     uniIdUser: null,
   });
-  const [uniIdConfig, setUniIdConfig] = useState(FALLBACK_UNIID_CONFIG);
+  const [uniIdConfig, setUniIdConfig] = useState<{ authServer: string; appId: string }>({
+    authServer: '',
+    appId: '',
+  });
   const uniIdService = useMemo(() => new UniIdService(uniIdConfig), [uniIdConfig]);
   const [githubBindingStatus, setGithubBindingStatus] = useState<'bound' | 'unbound' | 'unknown'>('unknown');
   const [language, setLanguageState] = useState<Language>(() => {
