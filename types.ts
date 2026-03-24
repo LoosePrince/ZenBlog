@@ -148,3 +148,27 @@ export interface AuthState {
   uniIdToken: string | null;
   uniIdUser: UniIdUser | null;
 }
+
+export type CommentStatus = 'pending' | 'approved' | 'rejected';
+
+export interface CommentAuthor {
+  userId: string;
+  username: string;
+}
+
+export interface ZenCommentData {
+  postId: string;
+  content: string;
+  status: CommentStatus;
+  author: CommentAuthor;
+  parentCommentId: string | null;
+  rootCommentId: string | null;
+  depth: 0 | 1;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ZenCommentRecord {
+  id: string;
+  data: ZenCommentData;
+}

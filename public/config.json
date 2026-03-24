@@ -3,7 +3,7 @@
   "repo": "ZenBlog",
   "branch": "data",
   "uniid": {
-    "authServer": "http://localhost:3000",
+    "authServer": "https://uniid.xzt.plus",
     "appId": "cmn4fv9zd0003yjt3mp6wmgr9"
   }
 }
