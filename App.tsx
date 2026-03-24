@@ -1,5 +1,5 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
-import { HashRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, createContext, useContext, useMemo } from 'react';
+import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from './components/Navbar';
@@ -8,9 +8,16 @@ import PostDetail from './pages/PostDetail';
 import Editor from './pages/Editor';
 import Settings from './pages/Settings';
 import About from './pages/About';
-import { Post, Profile, GitHubConfig, PublicConfig, FileChange } from './types';
+import Login from './pages/Login';
+import { AuthState, Post, Profile, GitHubConfig, PublicConfig, FileChange } from './types';
 import { GitHubService } from './services/githubService';
+import { UniIdService } from './services/uniidService';
 import { translations, Language } from './services/i18n';
+
+const FALLBACK_UNIID_CONFIG = {
+  authServer: 'http://localhost:3000',
+  appId: 'cmn4fv9zd0003yjt3mp6wmgr9',
+};
 
 export type Theme = 'light' | 'dark' | 'auto';
 
@@ -26,8 +33,17 @@ interface ThemeContextType {
   effectiveTheme: 'light' | 'dark';
 }
 
+interface AuthContextType {
+  authState: AuthState;
+  githubBindingStatus: 'bound' | 'unbound' | 'unknown';
+  loginByUniId: () => Promise<boolean>;
+  loginByGithubKey: (key: string) => Promise<void>;
+  logout: () => Promise<void>;
+}
+
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
@@ -38,6 +54,12 @@ export const useLanguage = () => {
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) throw new Error('useTheme must be used within ThemeProvider');
+  return context;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
 
@@ -67,8 +89,9 @@ const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const AppContent: React.FC<{
-  isAdmin: boolean;
-  onToggleAdmin: () => void;
+  canManage: boolean;
+  authState: AuthState;
+  logout: () => Promise<void>;
   posts: Post[];
   profile: Profile;
   config: GitHubConfig | null;
@@ -81,20 +104,33 @@ const AppContent: React.FC<{
   handleSavePost: (p: Partial<Post>, c: string, options?: { pendingFiles?: Array<{ localId: string; file: File }>; onProgress?: (current: number, total: number) => void; signal?: AbortSignal }) => Promise<void>;
   handleDeletePost: (id: string) => Promise<void>;
 }> = ({
-  isAdmin, onToggleAdmin, posts, profile, config, configLoading, loading, initError,
+  canManage, authState, logout, posts, profile, config, configLoading, loading, initError,
   handleSaveConfig, handleSaveProfile, handleSaveConfigAndProfile, handleSavePost, handleDeletePost
 }) => {
   const location = useLocation();
   const { t } = useLanguage();
 
+  const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    if (!authState.isUniIdAuthed && !authState.isWriterUnlocked) {
+      return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    }
+    return <>{children}</>;
+  };
+
   return (
     <div className="min-h-screen bg-[#f9fafb] dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans selection:bg-indigo-100 selection:text-indigo-900 dark:selection:bg-indigo-900 dark:selection:text-indigo-100 transition-colors duration-300">
       <Toaster position="top-center" reverseOrder={false} />
-      <Navbar isAdmin={isAdmin} onToggleAdmin={onToggleAdmin} profile={profile} />
+      <Navbar
+        canManage={canManage}
+        isUniIdAuthed={authState.isUniIdAuthed}
+        isWriterUnlocked={authState.isWriterUnlocked}
+        onLogout={logout}
+        profile={profile}
+      />
       
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <AnimatePresence mode="wait">
-          {(!config || !config.token) && isAdmin && (
+          {(!config || !config.token) && canManage && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -126,11 +162,12 @@ const AppContent: React.FC<{
         ) : (
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
-              <Route path="/" element={<PageWrapper><Home posts={posts} profile={profile} isAdmin={isAdmin} /></PageWrapper>} />
-              <Route path="/post/:id" element={<PageWrapper><PostDetail posts={posts} config={config} profile={profile} isAdmin={isAdmin} onDelete={handleDeletePost} /></PageWrapper>} />
-              <Route path="/edit/:id" element={<PageWrapper><Editor posts={posts} config={config} onSave={handleSavePost} /></PageWrapper>} />
-              <Route path="/settings" element={<PageWrapper><Settings config={config} profile={profile} onSaveConfig={handleSaveConfig} onSaveProfile={handleSaveProfile} onSaveConfigAndProfile={handleSaveConfigAndProfile} /></PageWrapper>} />
-              <Route path="/about" element={<PageWrapper><About profile={profile} isAdmin={isAdmin} config={config} onSave={handleSaveProfile} /></PageWrapper>} />
+              <Route path="/" element={<PageWrapper><Home posts={posts} profile={profile} isAdmin={canManage} /></PageWrapper>} />
+              <Route path="/post/:id" element={<PageWrapper><PostDetail posts={posts} config={config} profile={profile} isAdmin={canManage} onDelete={handleDeletePost} /></PageWrapper>} />
+              <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
+              <Route path="/edit/:id" element={<ProtectedRoute><PageWrapper><Editor posts={posts} config={config} onSave={handleSavePost} /></PageWrapper></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><PageWrapper><Settings config={config} profile={profile} onSaveConfig={handleSaveConfig} onSaveProfile={handleSaveProfile} onSaveConfigAndProfile={handleSaveConfigAndProfile} /></PageWrapper></ProtectedRoute>} />
+              <Route path="/about" element={<PageWrapper><About profile={profile} isAdmin={canManage} config={config} onSave={handleSaveProfile} /></PageWrapper>} />
             </Routes>
           </AnimatePresence>
         )}
@@ -147,7 +184,15 @@ const AppContent: React.FC<{
 };
 
 const App: React.FC = () => {
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [authState, setAuthState] = useState<AuthState>({
+    isUniIdAuthed: false,
+    isWriterUnlocked: false,
+    uniIdToken: null,
+    uniIdUser: null,
+  });
+  const [uniIdConfig, setUniIdConfig] = useState(FALLBACK_UNIID_CONFIG);
+  const uniIdService = useMemo(() => new UniIdService(uniIdConfig), [uniIdConfig]);
+  const [githubBindingStatus, setGithubBindingStatus] = useState<'bound' | 'unbound' | 'unknown'>('unknown');
   const [language, setLanguageState] = useState<Language>(() => {
     const saved = localStorage.getItem('zenblog_lang');
     return (saved as Language) || 'zh';
@@ -219,6 +264,45 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
 
+  const canManage = authState.isUniIdAuthed || authState.isWriterUnlocked;
+
+  useEffect(() => {
+    const restore = async () => {
+      const cachedToken = localStorage.getItem('zenblog_uniid_token');
+      const cachedUser = localStorage.getItem('zenblog_uniid_user');
+      const cachedWriter = localStorage.getItem('zenblog_writer_unlocked') === '1';
+      if (cachedWriter) {
+        setAuthState((prev) => ({ ...prev, isWriterUnlocked: true }));
+      }
+      if (!cachedToken) return;
+      const checked = await uniIdService.checkToken(cachedToken);
+      if (checked.valid) {
+        let boundStatus: 'bound' | 'unbound' | 'unknown' = 'unknown';
+        const userId = checked.user?.id ?? (cachedUser ? JSON.parse(cachedUser)?.id : undefined);
+        if (userId) {
+          try {
+            const bindingKey = await uniIdService.getGitHubBinding(userId);
+            boundStatus = bindingKey ? 'bound' : 'unbound';
+          } catch {
+            boundStatus = 'unknown';
+          }
+        }
+        setAuthState({
+          isUniIdAuthed: true,
+          isWriterUnlocked: cachedWriter,
+          uniIdToken: cachedToken,
+          uniIdUser: checked.user ?? (cachedUser ? JSON.parse(cachedUser) : null),
+        });
+        setGithubBindingStatus(boundStatus);
+      } else {
+        localStorage.removeItem('zenblog_uniid_token');
+        localStorage.removeItem('zenblog_uniid_user');
+        setGithubBindingStatus('unknown');
+      }
+    };
+    restore();
+  }, [uniIdService]);
+
   // 从 /config.json 读取配置（main 分支中的静态文件）
   useEffect(() => {
     const loadConfig = async () => {
@@ -239,6 +323,12 @@ const App: React.FC = () => {
         if (response.ok) {
           const publicConfig = await response.json();
           if (publicConfig.owner && publicConfig.repo) {
+            if (publicConfig.uniid?.authServer && publicConfig.uniid?.appId) {
+              setUniIdConfig({
+                authServer: publicConfig.uniid.authServer,
+                appId: publicConfig.uniid.appId,
+              });
+            }
             setConfig({
               token: '', // token 只存在 localStorage
               owner: publicConfig.owner,
@@ -346,6 +436,14 @@ const App: React.FC = () => {
   const handleSaveConfig = async (newConfig: GitHubConfig) => {
     localStorage.setItem('zenblog_config', JSON.stringify(newConfig));
     setConfig(newConfig);
+    if (authState.isUniIdAuthed && authState.uniIdUser?.id && newConfig.token) {
+      try {
+        await uniIdService.upsertGitHubBinding(authState.uniIdUser.id, newConfig.token);
+        setGithubBindingStatus('bound');
+      } catch (err) {
+        console.warn('Failed to sync GitHub key to UniID:', err);
+      }
+    }
     toast.success(t.settings.syncLocal);
   };
 
@@ -394,6 +492,14 @@ const App: React.FC = () => {
     // 3. 更新本地状态和存储（仅保存 config，profile 需要 token）
     localStorage.setItem('zenblog_config', JSON.stringify(newConfig));
     setConfig(newConfig);
+    if (authState.isUniIdAuthed && authState.uniIdUser?.id && newConfig.token) {
+      try {
+        await uniIdService.upsertGitHubBinding(authState.uniIdUser.id, newConfig.token);
+        setGithubBindingStatus('bound');
+      } catch (err) {
+        console.warn('Failed to sync GitHub key to UniID:', err);
+      }
+    }
     
     // 4. 如果有 token 且有 profile 变更，更新 profile 并提交到云端
     if (newConfig.token && isProfileChanged) {
@@ -419,6 +525,85 @@ const App: React.FC = () => {
     } else {
       // 仅保存 config（token），不涉及 profile
       toast.success(t.settings.syncLocal);
+    }
+  };
+
+  const loginByUniId = async (): Promise<boolean> => {
+    const result = await uniIdService.login();
+    if (result.cancelled || !result.token || !result.user) return false;
+    localStorage.setItem('zenblog_uniid_token', result.token);
+    localStorage.setItem('zenblog_uniid_user', JSON.stringify(result.user));
+    let writerUnlocked = localStorage.getItem('zenblog_writer_unlocked') === '1';
+    let configToken = config?.token || '';
+    if (!configToken && result.user.id) {
+      try {
+        const bindingKey = await uniIdService.getGitHubBinding(result.user.id);
+        setGithubBindingStatus(bindingKey ? 'bound' : 'unbound');
+        if (bindingKey && config) {
+          configToken = bindingKey;
+          const merged = { ...config, token: bindingKey };
+          localStorage.setItem('zenblog_config', JSON.stringify(merged));
+          setConfig(merged);
+          writerUnlocked = true;
+          localStorage.setItem('zenblog_writer_unlocked', '1');
+        }
+      } catch (err) {
+        console.warn('Failed to load GitHub key binding:', err);
+        setGithubBindingStatus('unknown');
+      }
+    } else {
+      setGithubBindingStatus('unknown');
+    }
+    setAuthState({
+      isUniIdAuthed: true,
+      isWriterUnlocked: writerUnlocked,
+      uniIdToken: result.token,
+      uniIdUser: result.user,
+    });
+    return true;
+  };
+
+  const loginByGithubKey = async (key: string): Promise<void> => {
+    const res = await fetch('https://api.github.com/user', {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `token ${key}`,
+      },
+    });
+    if (!res.ok) {
+      throw new Error('GitHub Key 无效或权限不足');
+    }
+    localStorage.setItem('zenblog_writer_unlocked', '1');
+    setAuthState((prev) => ({ ...prev, isWriterUnlocked: true }));
+    if (config) {
+      const nextConfig = { ...config, token: key };
+      localStorage.setItem('zenblog_config', JSON.stringify(nextConfig));
+      setConfig(nextConfig);
+    }
+    if (authState.isUniIdAuthed && authState.uniIdUser?.id) {
+      await uniIdService.upsertGitHubBinding(authState.uniIdUser.id, key);
+      setGithubBindingStatus('bound');
+    }
+  };
+
+  const logout = async (): Promise<void> => {
+    try {
+      if (authState.isUniIdAuthed) {
+        await uniIdService.logout();
+      }
+    } catch (err) {
+      console.warn('UniID logout failed:', err);
+    } finally {
+      localStorage.removeItem('zenblog_uniid_token');
+      localStorage.removeItem('zenblog_uniid_user');
+      localStorage.removeItem('zenblog_writer_unlocked');
+      setAuthState({
+        isUniIdAuthed: false,
+        isWriterUnlocked: false,
+        uniIdToken: null,
+        uniIdUser: null,
+      });
+      setGithubBindingStatus('unknown');
     }
   };
 
@@ -526,23 +711,26 @@ const App: React.FC = () => {
   return (
     <ThemeContext.Provider value={{ theme, setTheme, effectiveTheme }}>
       <LanguageContext.Provider value={{ language, t, setLanguage }}>
-        <Router>
-          <AppContent 
-            isAdmin={isAdmin}
-            onToggleAdmin={() => setIsAdmin(!isAdmin)}
-            posts={posts}
-            profile={profile}
-            config={config}
-            configLoading={configLoading}
-            loading={loading}
-            initError={initError}
-            handleSaveConfig={handleSaveConfig}
-            handleSaveProfile={handleSaveProfile}
-            handleSaveConfigAndProfile={handleSaveConfigAndProfile}
-            handleSavePost={handleSavePost}
-            handleDeletePost={handleDeletePost}
-          />
-        </Router>
+        <AuthContext.Provider value={{ authState, githubBindingStatus, loginByUniId, loginByGithubKey, logout }}>
+          <Router>
+            <AppContent
+              canManage={canManage}
+              authState={authState}
+              logout={logout}
+              posts={posts}
+              profile={profile}
+              config={config}
+              configLoading={configLoading}
+              loading={loading}
+              initError={initError}
+              handleSaveConfig={handleSaveConfig}
+              handleSaveProfile={handleSaveProfile}
+              handleSaveConfigAndProfile={handleSaveConfigAndProfile}
+              handleSavePost={handleSavePost}
+              handleDeletePost={handleDeletePost}
+            />
+          </Router>
+        </AuthContext.Provider>
       </LanguageContext.Provider>
     </ThemeContext.Provider>
   );

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Shield, Github, Save, CheckCircle, Database, ExternalLink, AlertTriangle, Layers, User, Settings as SettingsIcon, Globe } from 'lucide-react';
 import { GitHubConfig, Profile } from '../types';
 import { motion } from 'framer-motion';
-import { useLanguage } from '../App';
+import { useAuth, useLanguage } from '../App';
 import toast from 'react-hot-toast';
 
 interface SettingsProps {
@@ -15,11 +15,8 @@ interface SettingsProps {
 
 const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSaveProfile, onSaveConfigAndProfile }) => {
   const { t } = useLanguage();
+  const { authState, githubBindingStatus } = useAuth();
   const [token, setToken] = useState(config?.token || '');
-  // Repository配置从config中读取，不可编辑
-  const owner = config?.owner || '';
-  const repo = config?.repo || '';
-  const branch = config?.branch || 'data';
 
   const [name, setName] = useState(profile.name);
   const [bio, setBio] = useState(profile.bio);
@@ -192,36 +189,34 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
                   </a>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">{t.settings.owner}</label>
-                <input
-                  type="text"
-                  value={owner}
-                  disabled
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-lg md:rounded-2xl cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">{t.settings.repoName}</label>
-                <input
-                  type="text"
-                  value={repo}
-                  disabled
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-lg md:rounded-2xl cursor-not-allowed"
-                />
-              </div>
-
               <div className="md:col-span-2">
-                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">{t.settings.dataBranch}</label>
-                <input
-                  type="text"
-                  value={branch}
-                  disabled
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900 text-indigo-600 dark:text-indigo-400 font-black rounded-lg md:rounded-2xl cursor-not-allowed"
-                />
-                <p className="mt-2 text-[10px] text-indigo-400 dark:text-indigo-500 font-bold uppercase tracking-widest italic">{t.settings.branchHint}</p>
-                <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest italic">{t.settings.configReadOnly}</p>
+                <div className="rounded-xl md:rounded-2xl border border-indigo-100 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs md:text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">
+                      {t.settings.githubBinding}
+                    </p>
+                    <span
+                      className={`text-xs font-black uppercase tracking-wider ${
+                        githubBindingStatus === 'bound'
+                          ? 'text-green-600 dark:text-green-400'
+                          : githubBindingStatus === 'unbound'
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-gray-500 dark:text-gray-400'
+                      }`}
+                    >
+                      {!authState.isUniIdAuthed
+                        ? t.settings.githubBindingNeedUniId
+                        : githubBindingStatus === 'bound'
+                          ? t.settings.githubBindingBound
+                          : githubBindingStatus === 'unbound'
+                            ? t.settings.githubBindingUnbound
+                            : t.settings.githubBindingUnknown}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[10px] text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-widest italic">
+                    {t.settings.githubBindingHint}
+                  </p>
+                </div>
               </div>
             </div>
           </motion.section>

@@ -97,6 +97,7 @@ export interface PublicConfig {
   owner: string;
   repo: string;
   branch: string;
+  uniid?: UniIdConfig;
 }
 
 export interface FileChange {
@@ -128,4 +129,22 @@ export interface AppState {
   posts: Post[];
   profile: Profile;
   config: GitHubConfig | null;
+}
+
+export interface UniIdConfig {
+  authServer: string;
+  appId: string;
+}
+
+export interface UniIdUser {
+  id: string;
+  username?: string;
+  role?: string;
+}
+
+export interface AuthState {
+  isUniIdAuthed: boolean;
+  isWriterUnlocked: boolean;
+  uniIdToken: string | null;
+  uniIdUser: UniIdUser | null;
 }

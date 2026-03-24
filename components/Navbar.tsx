@@ -1,17 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Settings, PlusSquare, Home, User, ShieldCheck, Languages, Menu, X, Sun, Moon, Monitor } from 'lucide-react';
+import { Settings, PlusSquare, Home, User, Languages, Menu, X, Sun, Moon, Monitor, LogIn, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage, useTheme, Theme } from '../App';
 import { Profile } from '../types';
 
 interface NavbarProps {
-  isAdmin: boolean;
-  onToggleAdmin: () => void;
+  canManage: boolean;
+  isUniIdAuthed: boolean;
+  isWriterUnlocked: boolean;
+  onLogout: () => Promise<void>;
   profile: Profile;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ isAdmin, onToggleAdmin, profile }) => {
+const Navbar: React.FC<NavbarProps> = ({ canManage, isUniIdAuthed, isWriterUnlocked, onLogout, profile }) => {
   const location = useLocation();
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
@@ -154,8 +156,8 @@ const Navbar: React.FC<NavbarProps> = ({ isAdmin, onToggleAdmin, profile }) => {
               <span className="uppercase hidden sm:inline">{language}</span>
             </button>
 
-            {/* 桌面端管理员菜单 */}
-            {isAdmin && (
+            {/* 桌面端管理菜单 */}
+            {canManage && (
               <div className="hidden md:flex items-center space-x-6 mr-2 border-r pr-6 border-gray-100 dark:border-gray-800">
                 {adminItems.map((item) => (
                   <Link
@@ -174,18 +176,24 @@ const Navbar: React.FC<NavbarProps> = ({ isAdmin, onToggleAdmin, profile }) => {
               </div>
             )}
             
-            {/* 管理员切换按钮 */}
-            <button
-              onClick={onToggleAdmin}
-              className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${
-                isAdmin 
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' 
-                  : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              <ShieldCheck size={14} />
-              <span className="hidden sm:inline">{isAdmin ? t.nav.adminUser : t.nav.adminLogin}</span>
-            </button>
+            {!canManage ? (
+              <Link
+                to="/login"
+                className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <LogIn size={14} />
+                <span className="hidden sm:inline">{t.nav.login}</span>
+              </Link>
+            ) : (
+              <button
+                onClick={onLogout}
+                className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50"
+                title={`${isUniIdAuthed ? 'UniID' : ''}${isUniIdAuthed && isWriterUnlocked ? ' + ' : ''}${isWriterUnlocked ? 'GitHub Key' : ''}`}
+              >
+                <LogOut size={14} />
+                <span className="hidden sm:inline">{t.nav.logout}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -222,8 +230,8 @@ const Navbar: React.FC<NavbarProps> = ({ isAdmin, onToggleAdmin, profile }) => {
                   ))}
                 </div>
 
-                {/* 管理员菜单项（仅在管理员模式下显示） */}
-                {isAdmin && (
+                {/* 管理菜单项（仅登录后显示） */}
+                {canManage && (
                   <div className="px-2 pt-3 border-t border-gray-100 dark:border-gray-800">
                     <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-3 mb-2">
                       {t.nav.admin || '管理'}

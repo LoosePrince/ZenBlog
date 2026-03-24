@@ -1,5 +1,9 @@
 {
   "owner": "LoosePrince",
   "repo": "ZenBlog",
-  "branch": "data"
+  "branch": "data",
+  "uniid": {
+    "authServer": "http://localhost:3000",
+    "appId": "cmn4fv9zd0003yjt3mp6wmgr9"
+  }
 }
