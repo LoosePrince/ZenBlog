@@ -19,7 +19,14 @@ declare global {
   }
 }
 
-const UNI_ID_SDK_PATH = '/sdk/uniid.sdk.js';
+const UNI_ID_SDK_PATH = 'sdk/uniid.sdk.js';
+const getUniIdSdkUrl = (authServer: string): string => {
+  const normalized = authServer.trim().replace(/\/+$/, '');
+  if (!normalized) {
+    throw new Error('UniID authServer 未配置');
+  }
+  return `${normalized}/${UNI_ID_SDK_PATH}`;
+};
 const BINDING_DATA_TYPE = 'zenblog_account_binding';
 const COMMENT_DATA_TYPE = 'zenblog_comment';
 
@@ -46,14 +53,25 @@ export class UniIdService {
       return Promise.resolve();
     }
     return new Promise((resolve, reject) => {
-      const existing = document.querySelector<HTMLScriptElement>(`script[data-uniid-sdk="1"]`);
-      if (existing) {
-        existing.addEventListener('load', () => resolve(), { once: true });
-        existing.addEventListener('error', () => reject(new Error('UniID SDK 加载失败')), { once: true });
+      let sdkUrl: string;
+      try {
+        sdkUrl = getUniIdSdkUrl(this.config.authServer);
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error('UniID SDK 地址无效'));
         return;
       }
+      const existing = document.querySelector<HTMLScriptElement>(`script[data-uniid-sdk="1"]`);
+      if (existing) {
+        if (existing.src !== sdkUrl) {
+          existing.remove();
+        } else {
+          existing.addEventListener('load', () => resolve(), { once: true });
+          existing.addEventListener('error', () => reject(new Error('UniID SDK 加载失败')), { once: true });
+          return;
+        }
+      }
       const script = document.createElement('script');
-      script.src = `${this.config.authServer.replace(/\/+$/, '')}${UNI_ID_SDK_PATH}`;
+      script.src = sdkUrl;
       script.async = true;
       script.dataset.uniidSdk = '1';
       script.onload = () => resolve();

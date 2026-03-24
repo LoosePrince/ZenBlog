@@ -44,6 +44,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
     authServer: '',
     appId: '',
   });
+  const isUniIdConfigReady = Boolean(uniIdConfig.authServer && uniIdConfig.appId);
 
   const isDark = effectiveTheme === 'dark';
 
@@ -175,7 +176,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   }, [config, post, segments]);
 
   const loadComments = async () => {
-    if (!post?.id) return;
+    if (!post?.id || !isUniIdConfigReady) return;
     setCommentLoading(true);
     try {
       const service = new UniIdService(uniIdConfig);
@@ -190,12 +191,17 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   };
 
   useEffect(() => {
+    if (!isUniIdConfigReady) return;
     loadComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [post?.id, uniIdConfig.authServer, uniIdConfig.appId, isAdmin]);
+  }, [post?.id, isUniIdConfigReady, isAdmin]);
 
   const submitComment = async (content: string, parent?: ZenCommentRecord) => {
     if (!post?.id) return;
+    if (!isUniIdConfigReady) {
+      toast.error('评论服务配置未就绪');
+      return;
+    }
     if (!canComment || !authState.uniIdUser?.id) {
       toast.error(t.comment.loginRequired);
       return;
@@ -238,6 +244,10 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   };
 
   const reviewComment = async (commentId: string, status: CommentStatus) => {
+    if (!isUniIdConfigReady) {
+      toast.error('评论服务配置未就绪');
+      return;
+    }
     setCommentSubmitting(true);
     try {
       const service = new UniIdService(uniIdConfig);
