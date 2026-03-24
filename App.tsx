@@ -1,18 +1,18 @@
-import React, { useState, useEffect, createContext, useContext, useMemo } from 'react';
-import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Link, Navigate, Route, HashRouter as Router, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import Home from './pages/Home';
-import PostDetail from './pages/PostDetail';
-import Editor from './pages/Editor';
-import Settings from './pages/Settings';
 import About from './pages/About';
+import Editor from './pages/Editor';
+import Home from './pages/Home';
 import Login from './pages/Login';
-import { AuthState, Post, Profile, GitHubConfig, PublicConfig, FileChange } from './types';
+import PostDetail from './pages/PostDetail';
+import Settings from './pages/Settings';
 import { GitHubService } from './services/githubService';
+import { Language, translations } from './services/i18n';
 import { UniIdService } from './services/uniidService';
-import { translations, Language } from './services/i18n';
+import { AuthState, FileChange, GitHubConfig, Post, Profile, PublicConfig } from './types';
 
 export type Theme = 'light' | 'dark' | 'auto';
 
@@ -62,7 +62,7 @@ export const useAuth = () => {
 export const formatDate = (date: string | Date, format: 'full' | 'short' | 'editor', language: Language = 'zh'): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   const locale = language === 'zh' ? 'zh-CN' : 'en-US';
-  
+
   if (format === 'full') {
     return dateObj.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
   } else if (format === 'short') {
@@ -102,81 +102,81 @@ const AppContent: React.FC<{
   canManage, authState, logout, posts, profile, config, configLoading, loading, initError,
   handleSaveConfig, handleSaveProfile, handleSaveConfigAndProfile, handleSavePost, handleDeletePost
 }) => {
-  const location = useLocation();
-  const { t } = useLanguage();
+    const location = useLocation();
+    const { t } = useLanguage();
 
-  const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    if (!authState.isUniIdAuthed && !authState.isWriterUnlocked) {
-      return <Navigate to="/login" state={{ from: location.pathname }} replace />;
-    }
-    return <>{children}</>;
-  };
+    const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+      if (!authState.isUniIdAuthed && !authState.isWriterUnlocked) {
+        return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+      }
+      return <>{children}</>;
+    };
 
-  return (
-    <div className="min-h-screen bg-[#f9fafb] dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans selection:bg-indigo-100 selection:text-indigo-900 dark:selection:bg-indigo-900 dark:selection:text-indigo-100 transition-colors duration-300">
-      <Toaster position="top-center" reverseOrder={false} />
-      <Navbar
-        canManage={canManage}
-        isUniIdAuthed={authState.isUniIdAuthed}
-        isWriterUnlocked={authState.isWriterUnlocked}
-        onLogout={logout}
-        profile={profile}
-      />
-      
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <AnimatePresence mode="wait">
-          {(!config || !config.token) && canManage && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mb-8 p-6 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-3xl border border-indigo-200 dark:border-indigo-800 flex flex-col md:flex-row items-center justify-between"
-            >
-              <div className="mb-4 md:mb-0">
-                <h3 className="text-xl font-bold text-indigo-700 dark:text-indigo-300">存算分离模式已就绪</h3>
-                <p className="text-gray-600 dark:text-gray-300">请配置 Token，数据将自动存储在专用的 <b>data</b> 分支。</p>
-              </div>
-              <Link to="/settings" className="px-6 py-2 border-2 border-indigo-300 dark:border-indigo-700 bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 rounded-xl font-bold hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-95">
-                {t.nav.settings}
-              </Link>
-            </motion.div>
-          )}
-        </AnimatePresence>
+    return (
+      <div className="min-h-screen bg-[#f9fafb] dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans selection:bg-indigo-100 selection:text-indigo-900 dark:selection:bg-indigo-900 dark:selection:text-indigo-100 transition-colors duration-300">
+        <Toaster position="top-center" reverseOrder={false} />
+        <Navbar
+          canManage={canManage}
+          isUniIdAuthed={authState.isUniIdAuthed}
+          isWriterUnlocked={authState.isWriterUnlocked}
+          onLogout={logout}
+          profile={profile}
+        />
 
-        {initError && (
-          <div className="mb-8 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm flex items-center">
-            <span className="mr-2">⚠️</span>
-            <strong>{t.common.error}：</strong>{initError}
-          </div>
-        )}
-
-        {(configLoading || loading) ? (
-          <div className="flex flex-col items-center justify-center py-32">
-            <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-6"></div>
-            <p className="text-gray-400 font-medium tracking-widest uppercase text-xs">{t.common.loading}</p>
-          </div>
-        ) : (
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <AnimatePresence mode="wait">
-            <Routes location={location} key={location.pathname}>
-              <Route path="/" element={<PageWrapper><Home posts={posts} profile={profile} isAdmin={canManage} /></PageWrapper>} />
-              <Route path="/post/:id" element={<PageWrapper><PostDetail posts={posts} config={config} profile={profile} isAdmin={canManage} onDelete={handleDeletePost} /></PageWrapper>} />
-              <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
-              <Route path="/edit/:id" element={<ProtectedRoute><PageWrapper><Editor posts={posts} config={config} onSave={handleSavePost} /></PageWrapper></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><PageWrapper><Settings config={config} profile={profile} onSaveConfig={handleSaveConfig} onSaveProfile={handleSaveProfile} onSaveConfigAndProfile={handleSaveConfigAndProfile} /></PageWrapper></ProtectedRoute>} />
-              <Route path="/about" element={<PageWrapper><About profile={profile} isAdmin={canManage} config={config} onSave={handleSaveProfile} /></PageWrapper>} />
-            </Routes>
+            {(!config || !config.token) && canManage && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-8 p-6 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-3xl border border-indigo-200 dark:border-indigo-800 flex flex-col md:flex-row items-center justify-between"
+              >
+                <div className="mb-4 md:mb-0">
+                  <h3 className="text-xl font-bold text-indigo-700 dark:text-indigo-300">存算分离模式已就绪</h3>
+                  <p className="text-gray-600 dark:text-gray-300">请配置 Token，数据将自动存储在专用的 <b>data</b> 分支。</p>
+                </div>
+                <Link to="/settings" className="px-6 py-2 border-2 border-indigo-300 dark:border-indigo-700 bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 rounded-xl font-bold hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-95">
+                  {t.nav.settings}
+                </Link>
+              </motion.div>
+            )}
           </AnimatePresence>
-        )}
-      </main>
 
-      <footer className="py-16 border-t border-gray-100 dark:border-gray-800 mt-20">
-        <div className="max-w-5xl mx-auto px-4 text-center">
-          <p className="text-gray-400 dark:text-gray-500 text-sm">© {new Date().getFullYear()} {profile.name}.</p>
-          <p className="text-gray-300 dark:text-gray-600 text-[10px] mt-2 tracking-widest uppercase">Powered by ZenBlog & GitHub API</p>
-        </div>
-      </footer>
-    </div>
-  );
-};
+          {initError && (
+            <div className="mb-8 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm flex items-center">
+              <span className="mr-2">⚠️</span>
+              <strong>{t.common.error}：</strong>{initError}
+            </div>
+          )}
+
+          {(configLoading || loading) ? (
+            <div className="flex flex-col items-center justify-center py-32">
+              <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-6"></div>
+              <p className="text-gray-400 font-medium tracking-widest uppercase text-xs">{t.common.loading}</p>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              <Routes location={location} key={location.pathname}>
+                <Route path="/" element={<PageWrapper><Home posts={posts} profile={profile} isAdmin={canManage} /></PageWrapper>} />
+                <Route path="/post/:id" element={<PageWrapper><PostDetail posts={posts} config={config} profile={profile} isAdmin={canManage} onDelete={handleDeletePost} /></PageWrapper>} />
+                <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
+                <Route path="/edit/:id" element={<ProtectedRoute><PageWrapper><Editor posts={posts} config={config} onSave={handleSavePost} /></PageWrapper></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><PageWrapper><Settings config={config} profile={profile} onSaveConfig={handleSaveConfig} onSaveProfile={handleSaveProfile} onSaveConfigAndProfile={handleSaveConfigAndProfile} /></PageWrapper></ProtectedRoute>} />
+                <Route path="/about" element={<PageWrapper><About profile={profile} isAdmin={canManage} config={config} onSave={handleSaveProfile} /></PageWrapper>} />
+              </Routes>
+            </AnimatePresence>
+          )}
+        </main>
+
+        <footer className="py-16 border-t border-gray-100 dark:border-gray-800 mt-20">
+          <div className="max-w-5xl mx-auto px-4 text-center">
+            <p className="text-gray-400 dark:text-gray-500 text-sm">© {new Date().getFullYear()} {profile.name}.</p>
+            <p className="text-gray-300 dark:text-gray-600 text-[10px] mt-2 tracking-widest uppercase">Powered by ZenBlog & GitHub API</p>
+          </div>
+        </footer>
+      </div>
+    );
+  };
 
 const App: React.FC = () => {
   const [authState, setAuthState] = useState<AuthState>({
@@ -217,15 +217,15 @@ const App: React.FC = () => {
   useEffect(() => {
     const updateTheme = () => {
       let isDark = false;
-      
+
       if (theme === 'dark') {
         isDark = true;
       } else if (theme === 'auto') {
         isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       }
-      
+
       setEffectiveTheme(isDark ? 'dark' : 'light');
-      
+
       if (isDark) {
         document.documentElement.classList.add('dark');
       } else {
@@ -305,37 +305,38 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        // 1. 优先从 localStorage 读取（管理员已配置，包含 token）
+        // 1. 先从 /config.json 读取公共配置（包括 uniid）
+        let publicConfig: PublicConfig | null = null;
+        const response = await fetch('/config.json');
+        if (response.ok) {
+          publicConfig = await response.json();
+        }
+        if (publicConfig?.uniid?.authServer && publicConfig?.uniid?.appId) {
+          setUniIdConfig({
+            authServer: publicConfig.uniid.authServer,
+            appId: publicConfig.uniid.appId,
+          });
+        }
+
+        // 2. 优先使用 localStorage 中的 GitHub 配置（保留 token）
         const saved = localStorage.getItem('zenblog_config');
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed.owner && parsed.repo) {
             setConfig(parsed);
-            setConfigLoading(false);
             return;
           }
         }
 
-        // 2. 从 /config.json 读取（main 分支中的静态文件）
-        const response = await fetch('/config.json');
-        if (response.ok) {
-          const publicConfig = await response.json();
-          if (publicConfig.owner && publicConfig.repo) {
-            if (publicConfig.uniid?.authServer && publicConfig.uniid?.appId) {
-              setUniIdConfig({
-                authServer: publicConfig.uniid.authServer,
-                appId: publicConfig.uniid.appId,
-              });
-            }
-            setConfig({
-              token: '', // token 只存在 localStorage
-              owner: publicConfig.owner,
-              repo: publicConfig.repo,
-              branch: publicConfig.branch || 'data'
-            });
-            setConfigLoading(false);
-            return;
-          }
+        // 3. localStorage 不可用时，回落到 /config.json 的 GitHub 配置
+        if (publicConfig?.owner && publicConfig?.repo) {
+          setConfig({
+            token: '', // token 只存在 localStorage
+            owner: publicConfig.owner,
+            repo: publicConfig.repo,
+            branch: publicConfig.branch || 'data'
+          });
+          return;
         }
 
         // 没有找到配置
@@ -498,7 +499,7 @@ const App: React.FC = () => {
         console.warn('Failed to sync GitHub key to UniID:', err);
       }
     }
-    
+
     // 4. 如果有 token 且有 profile 变更，更新 profile 并提交到云端
     if (newConfig.token && isProfileChanged) {
       setProfile(newProfile);
@@ -508,7 +509,7 @@ const App: React.FC = () => {
         await service.commitMultipleFiles('Update profile', [
           { path: 'data/profile.json', content: JSON.stringify(newProfile, null, 2) }
         ]);
-        
+
         setInitError(null);
         toast.success(t.settings.syncSuccess, { id: loadId });
       } catch (err: any) {
@@ -693,11 +694,11 @@ const App: React.FC = () => {
       await service.commitMultipleFiles(`Remove post: ${id}`, [
         { path: 'data/posts.json', content: JSON.stringify(updatedPosts, null, 2) }
       ]);
-      
+
       try {
         const { sha } = await service.getFile(post.contentPath);
         await service.deleteFile(post.contentPath, `Cleanup ${id}`, sha);
-      } catch (e) {}
+      } catch (e) { }
 
       setPosts(updatedPosts);
       toast.success(t.settings.syncSuccess, { id: loadId });

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { Github, KeyRound, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { useLanguage, useAuth } from '../App';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth, useLanguage } from '../App';
 
 const Login: React.FC = () => {
   const { t } = useLanguage();
