@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Shield, Github, Save, CheckCircle, Database, ExternalLink, AlertTriangle, Layers, User, Settings as SettingsIcon, Globe } from 'lucide-react';
+import { Shield, Database, ExternalLink, CheckCircle, AlertTriangle, User, Globe, ChevronRight } from 'lucide-react';
 import { GitHubConfig, Profile } from '../types';
-import { motion } from 'framer-motion';
 import { useAuth, useLanguage } from '../App';
 import toast from 'react-hot-toast';
 
@@ -13,17 +12,42 @@ interface SettingsProps {
   onSaveConfigAndProfile: (config: GitHubConfig, profile: Profile) => Promise<void>;
 }
 
-const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSaveProfile, onSaveConfigAndProfile }) => {
+type MobileSection = 'storage' | 'profile' | 'site';
+
+const inputBase =
+  'w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-md text-slate-900 dark:text-slate-100 shadow-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400/25 dark:focus:ring-slate-500/30 focus:border-slate-400 dark:focus:border-slate-500';
+
+const textareaBase = `${inputBase} resize-none leading-relaxed`;
+
+const btnPrimary =
+  'inline-flex items-center justify-center gap-2 rounded-md bg-slate-900 dark:bg-slate-100 px-4 py-2 text-sm font-medium text-white dark:text-slate-900 shadow-sm hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-50 disabled:pointer-events-none transition-colors';
+
+function SaveSpinner() {
+  return (
+    <div
+      className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white dark:border-slate-900 border-t-transparent dark:border-t-transparent"
+      aria-hidden
+    />
+  );
+}
+
+const Settings: React.FC<SettingsProps> = ({
+  config,
+  profile,
+  onSaveConfig,
+  onSaveProfile,
+  onSaveConfigAndProfile: _onSaveConfigAndProfile,
+}) => {
   const { t } = useLanguage();
   const { authState, githubBindingStatus } = useAuth();
   const [token, setToken] = useState(config?.token || '');
+  const [activeMobileSection, setActiveMobileSection] = useState<MobileSection>('storage');
 
   const [name, setName] = useState(profile.name);
   const [bio, setBio] = useState(profile.bio);
   const [avatar, setAvatar] = useState(profile.avatar);
   const [githubUrl, setGithubUrl] = useState(profile.socials.github || '');
 
-  // 站点设置
   const [siteName, setSiteName] = useState(profile.siteSettings?.siteName || '');
   const [siteIcon, setSiteIcon] = useState(profile.siteSettings?.siteIcon || '');
   const [siteDescription, setSiteDescription] = useState(profile.siteSettings?.siteDescription || '');
@@ -32,7 +56,8 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingSiteSettings, setSavingSiteSettings] = useState(false);
 
-  // 保存GitHub配置（仅保存token，repository信息从config.json读取）
+  const anySaving = savingConfig || savingProfile || savingSiteSettings;
+
   const handleSaveConfig = async () => {
     if (!token) {
       alert(t.settings.enterToken);
@@ -44,14 +69,12 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
     }
     setSavingConfig(true);
     try {
-      // 只保存token，repository信息从现有config中获取
       await onSaveConfig({ token, owner: config.owner, repo: config.repo, branch: config.branch || 'data' });
     } finally {
       setSavingConfig(false);
     }
   };
 
-  // 保存个人资料（name、bio、avatar、socials）
   const handleSaveProfile = async () => {
     if (!config?.token) {
       toast.error(t.settings.enterToken);
@@ -64,14 +87,13 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
         name,
         bio,
         avatar,
-        socials: { ...profile.socials, github: githubUrl }
+        socials: { ...profile.socials, github: githubUrl },
       });
     } finally {
       setSavingProfile(false);
     }
   };
 
-  // 保存站点设置
   const handleSaveSiteSettings = async () => {
     if (!config?.token) {
       toast.error(t.settings.enterToken);
@@ -84,124 +106,137 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
         siteSettings: {
           siteName,
           siteIcon,
-          siteDescription
-        }
+          siteDescription,
+        },
       });
     } finally {
       setSavingSiteSettings(false);
     }
   };
 
-  return (
-    <div className="max-w-5xl mx-auto pb-20 md:pb-0">
-      {/* 桌面端顶部 */}
-      <div className="hidden md:flex md:items-center justify-between mb-12 gap-6">
-        <div>
-          <h1 className="text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-2 flex items-center">
-            <SettingsIcon className="mr-3 text-indigo-600 dark:text-indigo-400" size={32} />
-            {t.settings.title}
-          </h1>
-          <p className="text-gray-400 dark:text-gray-500 font-medium italic">{t.settings.subtitle}</p>
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={handleSaveConfig}
-            disabled={savingConfig || savingProfile || savingSiteSettings}
-            className="flex items-center justify-center px-6 py-4 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-[1.5rem] font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
-          >
-            {savingConfig ? (
-              <div className="w-5 h-5 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-            ) : (
-              <Database size={18} className="mr-2" />
-            )}
-            {savingConfig ? t.settings.saving : t.settings.saveToken}
-          </button>
-          <button
-            onClick={handleSaveProfile}
-            disabled={savingConfig || savingProfile || savingSiteSettings}
-            className="flex items-center justify-center px-6 py-4 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-[1.5rem] font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
-          >
-            {savingProfile ? (
-              <div className="w-5 h-5 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-            ) : (
-              <User size={18} className="mr-2" />
-            )}
-            {savingProfile ? t.settings.saving : t.settings.saveProfile}
-          </button>
-          <button
-            onClick={handleSaveSiteSettings}
-            disabled={savingConfig || savingProfile || savingSiteSettings}
-            className="flex items-center justify-center px-6 py-4 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-[1.5rem] font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
-          >
-            {savingSiteSettings ? (
-              <div className="w-5 h-5 border-2 border-indigo-600 dark:text-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-            ) : (
-              <Globe size={18} className="mr-2" />
-            )}
-            {savingSiteSettings ? t.settings.saving : t.settings.saveSiteSettings}
-          </button>
-        </div>
-      </div>
+  const sectionVisibility = (section: MobileSection) =>
+    `${activeMobileSection === section ? 'block' : 'hidden'} lg:block`;
 
-      {/* 移动端顶部简化标题 */}
-      <div className="md:hidden mb-4">
-        <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-1 flex items-center">
-          <SettingsIcon className="mr-2 text-indigo-600 dark:text-indigo-400" size={22} />
+  const mobileSaveHandler =
+    activeMobileSection === 'storage'
+      ? handleSaveConfig
+      : activeMobileSection === 'profile'
+        ? handleSaveProfile
+        : handleSaveSiteSettings;
+
+  const mobileSaving =
+    activeMobileSection === 'storage'
+      ? savingConfig
+      : activeMobileSection === 'profile'
+        ? savingProfile
+        : savingSiteSettings;
+
+  const mobileSaveLabel =
+    activeMobileSection === 'storage'
+      ? t.settings.saveToken
+      : activeMobileSection === 'profile'
+        ? t.settings.saveProfile
+        : t.settings.saveSiteSettings;
+
+  return (
+    <div className="pb-24 lg:pb-2">
+      <div className="mb-6 rounded-lg border border-slate-200/80 bg-slate-50 px-4 py-5 dark:border-slate-700 dark:bg-slate-900/40 sm:px-5">
+        <nav className="mb-3 flex flex-wrap items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
+          <span>{t.settings.breadcrumbAdmin}</span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+          <span className="font-medium text-slate-700 dark:text-slate-300">{t.settings.breadcrumbSettings}</span>
+        </nav>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100 sm:text-2xl">
           {t.settings.title}
         </h1>
-        <p className="text-gray-400 dark:text-gray-500 font-medium text-sm">{t.settings.subtitle}</p>
+        <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">{t.settings.subtitle}</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-10">
-        <div className="lg:col-span-2 space-y-4 md:space-y-10">
-          {/* GitHub 存储层 */}
-          <motion.section 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-gray-800 p-4 md:p-10 rounded-xl md:rounded-[3rem] shadow-sm border border-gray-100 dark:border-gray-700"
+      <div
+        className="mb-4 flex rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900 lg:hidden"
+        role="tablist"
+        aria-label={t.settings.title}
+      >
+        {(
+          [
+            { id: 'storage' as const, label: t.settings.tabStorage },
+            { id: 'profile' as const, label: t.settings.tabProfile },
+            { id: 'site' as const, label: t.settings.tabSite },
+          ] as const
+        ).map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={activeMobileSection === id}
+            onClick={() => setActiveMobileSection(id)}
+            className={`flex-1 rounded-md px-2 py-2 text-center text-xs font-medium transition-colors sm:text-sm ${
+              activeMobileSection === id
+                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
+            }`}
           >
-            <div className="flex items-center space-x-3 mb-5 md:mb-10">
-              <div className="p-2 md:p-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl md:rounded-2xl border border-indigo-100 dark:border-indigo-900">
-                <Database size={20} className="md:w-6 md:h-6" />
-              </div>
-              <div>
-                <h2 className="text-lg md:text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{t.settings.dataPersistence}</h2>
-                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest mt-0.5">{t.settings.gitDatabase}</p>
-              </div>
-            </div>
+            {label}
+          </button>
+        ))}
+      </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-              <div className="md:col-span-2">
-                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">{t.settings.token}</label>
-                <input
-                  type="password"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  placeholder="ghp_xxxxxxxxxxxx"
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none transition-all font-mono text-sm"
-                />
-                <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[10px]">
-                  <span className="text-gray-400 dark:text-gray-500 font-bold uppercase tracking-tighter flex items-center">
-                    <Shield size={12} className="mr-1 text-green-500 dark:text-green-400" /> {t.settings.tokenHint}
-                  </span>
-                  <a href="https://github.com/settings/tokens" target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 font-black hover:underline flex items-center">
-                    {t.settings.generateKey} <ExternalLink size={10} className="ml-1" />
-                  </a>
+      <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
+        <div className="space-y-6 lg:col-span-2">
+          <div className={sectionVisibility('storage')}>
+            <section className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 shadow-sm">
+              <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-4 sm:px-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <Database className="h-4 w-4" aria-hidden />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      {t.settings.dataPersistence}
+                    </h2>
+                    <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{t.settings.gitDatabase}</p>
+                  </div>
                 </div>
               </div>
-              <div className="md:col-span-2">
-                <div className="rounded-xl md:rounded-2xl border border-indigo-100 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs md:text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">
-                      {t.settings.githubBinding}
-                    </p>
+              <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {t.settings.token}
+                  </label>
+                  <input
+                    type="password"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    placeholder="ghp_xxxxxxxxxxxx"
+                    autoComplete="off"
+                    className={`${inputBase} font-mono`}
+                  />
+                  <div className="mt-2 flex flex-col gap-2 text-xs text-slate-500 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+                    <span className="flex items-center gap-1">
+                      <Shield className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                      {t.settings.tokenHint}
+                    </span>
+                    <a
+                      href="https://github.com/settings/tokens"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 font-medium text-slate-700 hover:underline dark:text-slate-300"
+                    >
+                      {t.settings.generateKey}
+                      <ExternalLink className="h-3 w-3" aria-hidden />
+                    </a>
+                  </div>
+                </div>
+                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-600 dark:bg-slate-800/60">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{t.settings.githubBinding}</p>
                     <span
-                      className={`text-xs font-black uppercase tracking-wider ${
+                      className={`text-xs font-medium ${
                         githubBindingStatus === 'bound'
-                          ? 'text-green-600 dark:text-green-400'
+                          ? 'text-emerald-600 dark:text-emerald-400'
                           : githubBindingStatus === 'unbound'
                             ? 'text-amber-600 dark:text-amber-400'
-                            : 'text-gray-500 dark:text-gray-400'
+                            : 'text-slate-500 dark:text-slate-400'
                       }`}
                     >
                       {!authState.isUniIdAuthed
@@ -213,214 +248,206 @@ const Settings: React.FC<SettingsProps> = ({ config, profile, onSaveConfig, onSa
                             : t.settings.githubBindingUnknown}
                     </span>
                   </div>
-                  <p className="mt-2 text-[10px] text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-widest italic">
-                    {t.settings.githubBindingHint}
-                  </p>
+                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.settings.githubBindingHint}</p>
                 </div>
               </div>
-            </div>
-          </motion.section>
-
-          {/* 博主资料设置 */}
-          <motion.section 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white dark:bg-gray-800 p-4 md:p-10 rounded-xl md:rounded-[3rem] shadow-sm border border-gray-100 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 mb-5 md:mb-10">
-              <div className="p-2 md:p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl md:rounded-2xl">
-                <User size={20} className="md:w-6 md:h-6" />
+              <div className="hidden justify-end border-t border-slate-200 bg-slate-50/90 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/50 sm:px-5 lg:flex">
+                <button type="button" onClick={handleSaveConfig} disabled={anySaving} className={btnPrimary}>
+                  {savingConfig ? (
+                    <>
+                      <SaveSpinner />
+                      {t.settings.saving}
+                    </>
+                  ) : (
+                    <>
+                      <Database className="h-4 w-4" aria-hidden />
+                      {t.settings.saveToken}
+                    </>
+                  )}
+                </button>
               </div>
-              <div>
-                <h2 className="text-lg md:text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{t.settings.authorIdentity}</h2>
-                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest mt-0.5">{t.settings.publicProfile}</p>
-              </div>
-            </div>
-            
-            <div className="space-y-4 md:space-y-8">
-              <div>
-                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">{t.settings.displayName}</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none transition-all font-bold"
-                />
-              </div>
-              <div>
-                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">{t.settings.bio}</label>
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none resize-none transition-all font-medium leading-relaxed"
-                />
-              </div>
-              <div>
-                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">{t.settings.avatarUrl}</label>
-                <input
-                  type="text"
-                  value={avatar}
-                  onChange={(e) => setAvatar(e.target.value)}
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">GitHub</label>
-                <input
-                  type="text"
-                  value={githubUrl}
-                  onChange={(e) => setGithubUrl(e.target.value)}
-                  placeholder="https://github.com/username"
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none transition-all"
-                />
-              </div>
-            </div>
-          </motion.section>
-
-          {/* 站点设置 */}
-          <motion.section 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white dark:bg-gray-800 p-4 md:p-10 rounded-xl md:rounded-[3rem] shadow-sm border border-gray-100 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 mb-5 md:mb-10">
-              <div className="p-2 md:p-3 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl md:rounded-2xl">
-                <Globe size={20} className="md:w-6 md:h-6" />
-              </div>
-              <div>
-                <h2 className="text-lg md:text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{t.settings.siteSettings}</h2>
-                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest mt-0.5">{t.settings.siteSettingsDesc}</p>
-              </div>
-            </div>
-            
-            <div className="space-y-4 md:space-y-8">
-              <div>
-                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">{t.settings.siteName}</label>
-                <input
-                  type="text"
-                  value={siteName}
-                  onChange={(e) => setSiteName(e.target.value)}
-                  placeholder="例如：我的个人博客"
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none transition-all font-bold"
-                />
-              </div>
-              <div>
-                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">{t.settings.siteIcon}</label>
-                <input
-                  type="text"
-                  value={siteIcon}
-                  onChange={(e) => setSiteIcon(e.target.value)}
-                  placeholder="https://example.com/favicon.ico"
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none transition-all"
-                />
-                <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest italic">{t.settings.siteIconHint}</p>
-              </div>
-              <div>
-                <label className="block text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-2 md:mb-3">{t.settings.siteDescription}</label>
-                <textarea
-                  value={siteDescription}
-                  onChange={(e) => setSiteDescription(e.target.value)}
-                  rows={3}
-                  placeholder="例如：分享技术、生活与思考的个人博客"
-                  className="w-full px-3 md:px-5 py-2.5 md:py-4 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg md:rounded-2xl focus:ring-2 md:focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 outline-none resize-none transition-all font-medium leading-relaxed"
-                />
-                <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest italic">{t.settings.siteDescriptionHint}</p>
-              </div>
-            </div>
-          </motion.section>
-        </div>
-
-        <aside className="space-y-4 md:space-y-8">
-          <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 p-4 md:p-8 rounded-xl md:rounded-[2.5rem] border border-indigo-100 dark:border-indigo-900">
-            <h3 className="text-sm md:text-lg font-black mb-3 md:mb-4 flex items-center text-indigo-700 dark:text-indigo-400">
-              <AlertTriangle size={18} className="mr-2 md:w-5 md:h-5" /> {t.settings.storageMode}
-            </h3>
-            <div className="space-y-3 md:space-y-4 text-xs font-bold leading-relaxed text-gray-600 dark:text-gray-400">
-              <p>{t.settings.storageDesc}</p>
-            </div>
+            </section>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-4 md:p-8 rounded-xl md:rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm">
-            <h3 className="text-xs md:text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-4 md:mb-6 border-b border-gray-50 dark:border-gray-700 pb-3 md:pb-4">{t.settings.integrity}</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-400 dark:text-gray-500 font-bold uppercase tracking-tight">{t.settings.cloudSync}</span>
-                <span className="text-green-500 dark:text-green-400 font-black uppercase tracking-tight flex items-center">
-                  <CheckCircle size={12} className="mr-1" /> {t.settings.active}
+          <div className={sectionVisibility('profile')}>
+            <section className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 shadow-sm">
+              <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-4 sm:px-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <User className="h-4 w-4" aria-hidden />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      {t.settings.authorIdentity}
+                    </h2>
+                    <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{t.settings.publicProfile}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {t.settings.displayName}
+                  </label>
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputBase} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {t.settings.bio}
+                  </label>
+                  <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={4} className={textareaBase} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {t.settings.avatarUrl}
+                  </label>
+                  <input type="text" value={avatar} onChange={(e) => setAvatar(e.target.value)} className={inputBase} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">GitHub</label>
+                  <input
+                    type="text"
+                    value={githubUrl}
+                    onChange={(e) => setGithubUrl(e.target.value)}
+                    placeholder="https://github.com/username"
+                    className={inputBase}
+                  />
+                </div>
+              </div>
+              <div className="hidden justify-end border-t border-slate-200 bg-slate-50/90 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/50 sm:px-5 lg:flex">
+                <button type="button" onClick={handleSaveProfile} disabled={anySaving} className={btnPrimary}>
+                  {savingProfile ? (
+                    <>
+                      <SaveSpinner />
+                      {t.settings.saving}
+                    </>
+                  ) : (
+                    <>
+                      <User className="h-4 w-4" aria-hidden />
+                      {t.settings.saveProfile}
+                    </>
+                  )}
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <div className={sectionVisibility('site')}>
+            <section className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 shadow-sm">
+              <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-4 sm:px-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <Globe className="h-4 w-4" aria-hidden />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      {t.settings.siteSettings}
+                    </h2>
+                    <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{t.settings.siteSettingsDesc}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {t.settings.siteName}
+                  </label>
+                  <input
+                    type="text"
+                    value={siteName}
+                    onChange={(e) => setSiteName(e.target.value)}
+                    placeholder="例如：我的个人博客"
+                    className={inputBase}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {t.settings.siteIcon}
+                  </label>
+                  <input
+                    type="text"
+                    value={siteIcon}
+                    onChange={(e) => setSiteIcon(e.target.value)}
+                    placeholder="https://example.com/favicon.ico"
+                    className={inputBase}
+                  />
+                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{t.settings.siteIconHint}</p>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {t.settings.siteDescription}
+                  </label>
+                  <textarea
+                    value={siteDescription}
+                    onChange={(e) => setSiteDescription(e.target.value)}
+                    rows={3}
+                    placeholder="例如：分享技术、生活与思考的个人博客"
+                    className={textareaBase}
+                  />
+                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{t.settings.siteDescriptionHint}</p>
+                </div>
+              </div>
+              <div className="hidden justify-end border-t border-slate-200 bg-slate-50/90 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/50 sm:px-5 lg:flex">
+                <button type="button" onClick={handleSaveSiteSettings} disabled={anySaving} className={btnPrimary}>
+                  {savingSiteSettings ? (
+                    <>
+                      <SaveSpinner />
+                      {t.settings.saving}
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="h-4 w-4" aria-hidden />
+                      {t.settings.saveSiteSettings}
+                    </>
+                  )}
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-700 dark:bg-slate-800/40 sm:px-5">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+              {t.settings.storageMode}
+            </h3>
+            <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t.settings.storageDesc}</p>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-white px-4 py-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/50 sm:px-5">
+            <h3 className="mb-3 border-b border-slate-100 pb-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:text-slate-100">
+              {t.settings.integrity}
+            </h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-slate-500 dark:text-slate-400">{t.settings.cloudSync}</span>
+                <span className="inline-flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle className="h-4 w-4" aria-hidden />
+                  {t.settings.active}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-400 dark:text-gray-500 font-bold uppercase tracking-tight">{t.settings.apiQuota}</span>
-                <span className="text-gray-900 dark:text-gray-100 font-black uppercase tracking-tight">5000/hr</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-slate-500 dark:text-slate-400">{t.settings.apiQuota}</span>
+                <span className="font-medium tabular-nums text-slate-900 dark:text-slate-100">5000/hr</span>
               </div>
             </div>
           </div>
         </aside>
       </div>
 
-      {/* 移动端底部固定保存按钮 */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 p-3"
-      >
-        <div className="flex gap-2">
-          <button
-            onClick={handleSaveConfig}
-            disabled={savingConfig || savingProfile || savingSiteSettings}
-            className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
-          >
-            {savingConfig ? (
-              <>
-                <div className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                {t.settings.saving}
-              </>
-            ) : (
-              <>
-                <Database size={16} className="mr-1.5" />
-                {t.settings.saveToken}
-              </>
-            )}
-          </button>
-          <button
-            onClick={handleSaveProfile}
-            disabled={savingConfig || savingProfile || savingSiteSettings}
-            className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
-          >
-            {savingProfile ? (
-              <>
-                <div className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                {t.settings.saving}
-              </>
-            ) : (
-              <>
-                <User size={16} className="mr-1.5" />
-                {t.settings.saveProfile}
-              </>
-            )}
-          </button>
-          <button
-            onClick={handleSaveSiteSettings}
-            disabled={savingConfig || savingProfile || savingSiteSettings}
-            className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-black hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
-          >
-            {savingSiteSettings ? (
-              <>
-                <div className="w-4 h-4 border-2 border-indigo-600 dark:text-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                {t.settings.saving}
-              </>
-            ) : (
-              <>
-                <Globe size={16} className="mr-1.5" />
-                {t.settings.saveSiteSettings}
-              </>
-            )}
-          </button>
-        </div>
-      </motion.div>
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 p-3 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/95 lg:hidden">
+        <button type="button" onClick={mobileSaveHandler} disabled={anySaving} className={`${btnPrimary} w-full`}>
+          {mobileSaving ? (
+            <>
+              <SaveSpinner />
+              {t.settings.saving}
+            </>
+          ) : (
+            mobileSaveLabel
+          )}
+        </button>
+      </div>
     </div>
   );
 };
