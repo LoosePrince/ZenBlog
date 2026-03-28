@@ -63,7 +63,7 @@ const Navbar: React.FC<NavbarProps> = ({ canManage, isUniIdAuthed, isWriterUnloc
           <div className="flex items-center space-x-10">
             <Link to="/" className="flex items-center space-x-2 group">
               <img 
-                src={profile.siteSettings?.siteIcon || profile.avatar} 
+                src={profile.siteSettings?.siteIcon || profile.avatar || '/logo.png'} 
                 alt={profile.siteSettings?.siteName || profile.name}
                 className="w-8 h-8 rounded-lg object-cover border-2 border-indigo-100 dark:border-indigo-900 group-hover:border-indigo-300 dark:group-hover:border-indigo-700 transition-all shadow-sm"
               />

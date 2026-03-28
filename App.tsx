@@ -253,7 +253,7 @@ const App: React.FC = () => {
   const [profile, setProfile] = useState<Profile>({
     name: "ZenBlog",
     bio: "已就绪，欢迎使用！",
-    avatar: "https://t.alcy.cc/tx",
+    avatar: "/logo.png",
     socials: {}
   });
 
@@ -358,18 +358,22 @@ const App: React.FC = () => {
     const siteName = profile.siteSettings?.siteName || profile.name || 'ZenBlog';
     document.title = siteName;
 
-    // 更新 favicon（优先使用 siteSettings.siteIcon，否则使用 profile.avatar）
-    const iconUrl = profile.siteSettings?.siteIcon || profile.avatar;
-    if (iconUrl) {
-      let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
-      if (!link) {
-        link = document.createElement('link');
-        link.rel = 'icon';
-        document.head.appendChild(link);
-      }
-      link.type = iconUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/x-icon';
-      link.href = iconUrl;
+    // 更新 favicon（站点设置 / 头像 / 默认 public/favicon.ico）
+    const iconUrl =
+      profile.siteSettings?.siteIcon || profile.avatar || '/favicon.ico';
+    let link = document.querySelector("link[rel='icon']") as HTMLLinkElement;
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
     }
+    const path = iconUrl.split('?')[0].toLowerCase();
+    if (path.endsWith('.svg')) link.type = 'image/svg+xml';
+    else if (path.endsWith('.ico')) link.type = 'image/x-icon';
+    else if (path.endsWith('.png')) link.type = 'image/png';
+    else if (path.endsWith('.jpg') || path.endsWith('.jpeg')) link.type = 'image/jpeg';
+    else link.type = 'image/png';
+    link.href = iconUrl;
 
     // 更新 meta description
     const siteDescription = profile.siteSettings?.siteDescription || profile.bio || '';
