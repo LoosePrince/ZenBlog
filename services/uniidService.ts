@@ -299,7 +299,10 @@ export class UniIdService {
       offset: 0,
     });
     const items = Array.isArray(res?.items) ? res.items : [];
-    return items.map((item: any) => ({ id: item.id, data: item.data }));
+    // 服务端应尊重 filter；旧版 UniID 曾忽略 filter，此处再按 postId 收窄，避免评论串文
+    return items
+      .filter((item: any) => item?.data?.postId === postId)
+      .map((item: any) => ({ id: item.id, data: item.data }));
   }
 
   async createComment(payload: {
