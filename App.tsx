@@ -273,10 +273,42 @@ const App: React.FC = () => {
         setAuthState((prev) => ({ ...prev, isWriterUnlocked: true }));
       }
       if (!cachedToken) return;
+
+      const uniIdReady = Boolean(uniIdConfig.authServer?.trim() && uniIdConfig.appId?.trim());
+      // 在 /config.json 尚未写入 uniIdConfig 之前，authServer 为空，checkToken 会请求到本站错误路径并误判失效，
+      // 进而清除 localStorage。此处先按缓存恢复会话，待配置就绪后再向 UniID 服务端校验。
+      if (!uniIdReady) {
+        try {
+          const user = cachedUser ? (JSON.parse(cachedUser) as AuthState['uniIdUser']) : null;
+          setAuthState((prev) => ({
+            ...prev,
+            isUniIdAuthed: true,
+            uniIdToken: cachedToken,
+            uniIdUser: user,
+            isWriterUnlocked: prev.isWriterUnlocked || cachedWriter,
+          }));
+        } catch {
+          setAuthState((prev) => ({
+            ...prev,
+            isUniIdAuthed: true,
+            uniIdToken: cachedToken,
+            uniIdUser: null,
+            isWriterUnlocked: prev.isWriterUnlocked || cachedWriter,
+          }));
+        }
+        return;
+      }
+
       const checked = await uniIdService.checkToken(cachedToken);
       if (checked.valid) {
         let boundStatus: 'bound' | 'unbound' | 'unknown' = 'unknown';
-        const userId = checked.user?.id ?? (cachedUser ? JSON.parse(cachedUser)?.id : undefined);
+        let parsedCachedUser: AuthState['uniIdUser'] = null;
+        try {
+          parsedCachedUser = cachedUser ? JSON.parse(cachedUser) : null;
+        } catch {
+          parsedCachedUser = null;
+        }
+        const userId = checked.user?.id ?? parsedCachedUser?.id;
         if (userId) {
           try {
             const bindingKey = await uniIdService.getGitHubBinding(userId);
@@ -289,17 +321,23 @@ const App: React.FC = () => {
           isUniIdAuthed: true,
           isWriterUnlocked: cachedWriter,
           uniIdToken: cachedToken,
-          uniIdUser: checked.user ?? (cachedUser ? JSON.parse(cachedUser) : null),
+          uniIdUser: checked.user ?? parsedCachedUser,
         });
         setGithubBindingStatus(boundStatus);
       } else {
         localStorage.removeItem('zenblog_uniid_token');
         localStorage.removeItem('zenblog_uniid_user');
         setGithubBindingStatus('unknown');
+        setAuthState((prev) => ({
+          ...prev,
+          isUniIdAuthed: false,
+          uniIdToken: null,
+          uniIdUser: null,
+        }));
       }
     };
     restore();
-  }, [uniIdService]);
+  }, [uniIdService, uniIdConfig.authServer, uniIdConfig.appId]);
 
   // 从 /config.json 读取配置（main 分支中的静态文件）
   useEffect(() => {
