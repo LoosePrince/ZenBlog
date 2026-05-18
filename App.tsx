@@ -713,13 +713,15 @@ const App: React.FC = () => {
 
     const updatedPosts = [...posts];
     const index = updatedPosts.findIndex((p) => p.id === id);
+    const existingPost = index > -1 ? updatedPosts[index] : undefined;
     const newPost: Post = {
       id,
       title: postData.title!,
       excerpt: postData.excerpt!,
       category: postData.category!,
-      date: postData.date || (index > -1 ? posts[index].date : new Date().toISOString()),
+      date: postData.date || existingPost?.date || new Date().toISOString(),
       contentPath,
+      reference: postData.reference ?? existingPost?.reference,
     };
     if (index > -1) updatedPosts[index] = newPost;
     else updatedPosts.unshift(newPost);

@@ -1,3 +1,9 @@
+export interface PostReference {
+  sourceUrl: string;
+  resolvedUrl?: string;
+  snapshotUpdatedAt?: string;
+}
+
 export interface Post {
   id: string;
   title: string;
@@ -6,6 +12,7 @@ export interface Post {
   category: string;
   contentPath: string;
   image?: string;
+  reference?: PostReference;
   author?: {
     name: string;
     avatar: string;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, ArrowLeft, Loader2, Edit3, Trash2, Clock, Share2, AlertTriangle, X } from 'lucide-react';
+import { Calendar, ArrowLeft, Loader2, Edit3, Trash2, Clock, Share2, AlertTriangle, X, Link as LinkIcon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CommentStatus, Post, GitHubConfig, Profile, PublicConfig, ZenCommentRecord } from '../types';
@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth, useLanguage, useTheme, formatDate } from '../App';
 import toast from 'react-hot-toast';
 import { parseContentToSegments, getFileRawUrl, type ContentSegment } from '../utils/zenfile';
+import { fetchReferencedMarkdown } from '../utils/remoteMarkdown';
 import FileBlockView from '../components/FileBlockView';
 import { UniIdService } from '../services/uniidService';
 
@@ -78,12 +79,23 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
     }
 
     const fetchContent = async () => {
+      setLoading(true);
+      setError(null);
+      const service = new GitHubService(config);
       try {
-        const service = new GitHubService(config);
-        const { content } = await service.getFile(post.contentPath);
-        setContent(content);
-        
-        // 获取文章作者信息
+        if (post.reference?.resolvedUrl || post.reference?.sourceUrl) {
+          try {
+            const remote = await fetchReferencedMarkdown(post.reference.resolvedUrl || post.reference.sourceUrl);
+            setContent(remote.content);
+          } catch {
+            const { content: snapshot } = await service.getFile(post.contentPath);
+            setContent(snapshot);
+          }
+        } else {
+          const { content } = await service.getFile(post.contentPath);
+          setContent(content);
+        }
+
         const authorInfo = await service.getFileAuthor(post.contentPath);
         setAuthor(authorInfo);
       } catch (err: any) {
@@ -94,7 +106,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
     };
 
     fetchContent();
-  }, [id, post, config, t]);
+  }, [id, post, config, t.post.loadError, t.post.notFound]);
 
   useEffect(() => {
     const loadPublicConfig = async () => {
@@ -384,6 +396,20 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
               <Clock size={14} className="mr-1.5" />
               {readingTime} {t.post.minRead}
             </div>
+            {post.reference && (
+              <>
+                <div className="h-1 w-1 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+                <a
+                  href={post.reference.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 text-xs font-bold uppercase tracking-tight"
+                >
+                  <LinkIcon size={14} />
+                  {t.editor.referenceBadge}
+                </a>
+              </>
+            )}
           </div>
           
           <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-gray-900 dark:text-gray-100 mb-8 md:mb-10 leading-[1.1] tracking-tight">

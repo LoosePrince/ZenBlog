@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, ArrowLeft, Eye, FileText, Calendar, Settings, Clock, Type, ChevronRight } from 'lucide-react';
+import { Save, ArrowLeft, Eye, FileText, Calendar, Settings, Clock, Type, ChevronRight, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import { Post, GitHubConfig, EditorFileState } from '../types';
 import { GitHubService } from '../services/githubService';
 import { useLanguage, formatDate } from '../App';
@@ -9,6 +9,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import toast from 'react-hot-toast';
 import { parseContentToSegments, getFileRawUrl, type ContentSegment } from '../utils/zenfile';
+import { createPostReference, fetchReferencedMarkdown } from '../utils/remoteMarkdown';
 import FileBlockEditor from '../components/FileBlockEditor';
 import FileBlockView from '../components/FileBlockView';
 import InsertFileButton from '../components/InsertFileButton';
@@ -57,7 +58,12 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
   const [category, setCategory] = useState('');
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [content, setContent] = useState('');
+  const [isReference, setIsReference] = useState(false);
+  const [referenceUrl, setReferenceUrl] = useState('');
+  const [resolvedReferenceUrl, setResolvedReferenceUrl] = useState('');
+  const [fetchingReference, setFetchingReference] = useState(false);
   const [fileStates, setFileStates] = useState<Record<string, EditorFileState>>({});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!isNew);
@@ -77,6 +83,10 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
     setTitle(post.title);
     setExcerpt(post.excerpt);
     setCategory(post.category);
+    setDate(post.date ? new Date(post.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
+    setIsReference(Boolean(post.reference));
+    setReferenceUrl(post.reference?.sourceUrl || '');
+    setResolvedReferenceUrl(post.reference?.resolvedUrl || '');
     const fetchContent = async () => {
       try {
         const service = new GitHubService(config);
@@ -119,7 +129,7 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
 
   const handleInsertFiles = useCallback(
     (files: File[]) => {
-      if (!files.length) return;
+      if (isReference || !files.length) return;
       const textarea = textareaRef.current;
       const selectionStart = textarea?.selectionStart ?? content.length;
       const selectionEnd = textarea?.selectionEnd ?? selectionStart;
@@ -140,15 +150,43 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
       setFileStates((prev) => ({ ...prev, ...newStates }));
       setContent((prev) => prev.slice(0, selectionStart) + insertText + prev.slice(selectionEnd));
     },
-    [content]
+    [content, isReference]
   );
+
+  const applyRemoteMarkdown = async (mode: 'import' | 'refresh' = 'import') => {
+    if (!referenceUrl.trim()) {
+      toast.error(t.editor.referenceUrlRequired || '请输入文章链接');
+      return;
+    }
+    setFetchingReference(true);
+    try {
+      const remote = await fetchReferencedMarkdown(referenceUrl.trim());
+      setContent(remote.content);
+      setResolvedReferenceUrl(remote.resolvedUrl);
+      if (mode === 'import') {
+        if (!title && remote.metadata.title) setTitle(remote.metadata.title);
+        if (!excerpt && remote.metadata.excerpt) setExcerpt(remote.metadata.excerpt);
+        if (!category && remote.metadata.category) setCategory(remote.metadata.category);
+        if (remote.metadata.date) setDate(new Date(remote.metadata.date).toISOString().slice(0, 10));
+      }
+      toast.success(mode === 'refresh' ? t.editor.referenceSnapshotUpdated : t.editor.referenceLoaded);
+    } catch (err: any) {
+      toast.error(`${t.editor.referenceLoadFailed}: ${err.message || 'unknown error'}`);
+    } finally {
+      setFetchingReference(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!title || !content.trim()) {
       toast.error(t.editor.emptyFields);
       return;
     }
-    const parsedSegments = parseContentToSegments(content);
+    if (isReference && !referenceUrl.trim()) {
+      toast.error(t.editor.referenceUrlRequired || '请输入文章链接');
+      return;
+    }
+    const parsedSegments = isReference ? [] : parseContentToSegments(content);
     const pendingFiles = parsedSegments
       .filter((s) => s.type === 'file')
       .filter((s) => s.value.uuid.startsWith('local-') && fileStates[s.value.uuid]?.file)
@@ -162,12 +200,14 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
     setSaving(true);
     const loadingToast = hasUpload ? undefined : toast.loading(t.editor.saving);
     try {
+      const selectedDate = date ? new Date(date).toISOString() : new Date().toISOString();
       const postData: Partial<Post> = {
         id: isNew ? Math.random().toString(36).substr(2, 9) : id,
         title,
         excerpt: excerpt || content.substring(0, 150).replace(/\n/g, ' ') + '...',
         category,
-        date: isNew ? new Date().toISOString() : undefined,
+        date: selectedDate,
+        reference: isReference ? createPostReference(referenceUrl, resolvedReferenceUrl) : undefined,
       };
       await onSave(postData, content, {
         pendingFiles: hasUpload ? pendingFiles : undefined,
@@ -223,6 +263,15 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
         />
       </div>
       <div>
+        <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">{t.editor.date}</label>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className={inputBase}
+        />
+      </div>
+      <div>
         <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">{t.editor.excerpt}</label>
         <textarea
           value={excerpt}
@@ -231,6 +280,41 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
           placeholder={t.editor.excerptHint}
           className={textareaField}
         />
+      </div>
+      <div className="rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+          <input
+            type="checkbox"
+            checked={isReference}
+            disabled={!isNew && isReference}
+            onChange={(e) => setIsReference(e.target.checked)}
+          />
+          {t.editor.referencePost}
+        </label>
+        {isReference && (
+          <div className="mt-3 space-y-3">
+            <input
+              type="url"
+              value={referenceUrl}
+              onChange={(e) => setReferenceUrl(e.target.value)}
+              placeholder={t.editor.referenceUrlPlaceholder}
+              className={inputBase}
+            />
+            {resolvedReferenceUrl && (
+              <p className="break-all text-[11px] text-slate-500 dark:text-slate-400">{resolvedReferenceUrl}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => applyRemoteMarkdown(isNew ? 'import' : 'refresh')}
+              disabled={fetchingReference || saving}
+              className={`${btnSecondary} w-full`}
+            >
+              {fetchingReference ? <SaveSpinner /> : isNew ? <LinkIcon className="h-4 w-4" aria-hidden /> : <RefreshCw className="h-4 w-4" aria-hidden />}
+              {isNew ? t.editor.loadReference : t.editor.updateReferenceSnapshot}
+            </button>
+            <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">{t.editor.referenceHint}</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -318,16 +402,29 @@ const Editor: React.FC<EditorProps> = ({ posts, config, onSave }) => {
               />
               <div className="h-px bg-slate-100 dark:bg-slate-700" />
               <div className="flex flex-wrap items-center gap-2">
-                <InsertFileButton onSelect={handleInsertFiles}>
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.editor.insertFile}</span>
-                </InsertFileButton>
+                {!isReference && (
+                  <InsertFileButton onSelect={handleInsertFiles}>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.editor.insertFile}</span>
+                  </InsertFileButton>
+                )}
+                {isReference && (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                    <LinkIcon className="h-3.5 w-3.5" aria-hidden />
+                    {t.editor.referenceSnapshotReadonly}
+                  </span>
+                )}
               </div>
               <textarea
                 ref={textareaRef}
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder={t.editor.contentPlaceholder}
-                className="min-h-[55vh] w-full resize-none border-none bg-transparent font-mono text-sm leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none dark:text-slate-200 dark:placeholder:text-slate-500 md:text-base"
+                onChange={(e) => {
+                  if (!isReference) setContent(e.target.value);
+                }}
+                readOnly={isReference}
+                placeholder={isReference ? t.editor.referenceSnapshotPlaceholder : t.editor.contentPlaceholder}
+                className={`min-h-[55vh] w-full resize-none border-none bg-transparent font-mono text-sm leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none dark:text-slate-200 dark:placeholder:text-slate-500 md:text-base ${
+                  isReference ? 'cursor-not-allowed opacity-80' : ''
+                }`}
                 style={{ fontFamily: 'inherit' }}
               />
 
