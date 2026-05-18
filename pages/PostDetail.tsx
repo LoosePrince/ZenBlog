@@ -24,7 +24,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
-  const { authState } = useAuth();
+  const { authState, isUniIdAvailable } = useAuth();
   const { effectiveTheme } = useTheme();
   const [content, setContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -49,7 +49,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   const isDark = effectiveTheme === 'dark';
 
   const post = posts.find((p) => p.id === id);
-  const canComment = authState.isUniIdAuthed;
+  const canComment = isUniIdAvailable && authState.isUniIdAuthed;
 
   const commentRoots = useMemo(
     () =>
@@ -176,7 +176,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   }, [config, post, segments]);
 
   const loadComments = async () => {
-    if (!post?.id || !isUniIdConfigReady) return;
+    if (!post?.id || !isUniIdConfigReady || !isUniIdAvailable) return;
     setCommentLoading(true);
     try {
       const service = new UniIdService(uniIdConfig);
@@ -191,10 +191,10 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   };
 
   useEffect(() => {
-    if (!isUniIdConfigReady) return;
+    if (!isUniIdConfigReady || !isUniIdAvailable) return;
     loadComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [post?.id, isUniIdConfigReady, isAdmin]);
+  }, [post?.id, isUniIdConfigReady, isUniIdAvailable, isAdmin]);
 
   const submitComment = async (content: string, parent?: ZenCommentRecord) => {
     if (!post?.id) return;
@@ -470,7 +470,8 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
       </motion.div>
 
       <footer className="mt-16 md:mt-20 pt-10 border-t border-gray-100 dark:border-gray-800">
-        <section className="mb-10 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-6 md:p-8">
+        {isUniIdAvailable && (
+          <section className="mb-10 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-6 md:p-8">
           <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-4">{t.comment.title}</h3>
           {!canComment ? (
             <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
@@ -637,6 +638,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
             </div>
           )}
         </section>
+        )}
 
         <div className="bg-gray-50 dark:bg-gray-800 rounded-[2.5rem] p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-center md:text-left">

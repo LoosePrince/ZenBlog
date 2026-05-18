@@ -62,8 +62,11 @@ export class UniIdService {
       }
       const existing = document.querySelector<HTMLScriptElement>(`script[data-uniid-sdk="1"]`);
       if (existing) {
-        if (existing.src !== sdkUrl) {
+        if (existing.src !== sdkUrl || existing.dataset.uniidSdkState === 'error') {
           existing.remove();
+        } else if (existing.dataset.uniidSdkState === 'loaded' && window.AuthSDK) {
+          resolve();
+          return;
         } else {
           existing.addEventListener('load', () => resolve(), { once: true });
           existing.addEventListener('error', () => reject(new Error('UniID SDK 加载失败')), { once: true });
@@ -74,8 +77,16 @@ export class UniIdService {
       script.src = sdkUrl;
       script.async = true;
       script.dataset.uniidSdk = '1';
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('UniID SDK 加载失败'));
+      script.dataset.uniidSdkState = 'loading';
+      script.onload = () => {
+        script.dataset.uniidSdkState = 'loaded';
+        resolve();
+      };
+      script.onerror = () => {
+        script.dataset.uniidSdkState = 'error';
+        script.remove();
+        reject(new Error('UniID SDK 加载失败'));
+      };
       document.head.appendChild(script);
     });
   }

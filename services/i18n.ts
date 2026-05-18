@@ -207,6 +207,7 @@ export const translations = {
     auth: {
       loginTitle: '登录以继续',
       loginSubtitle: '登录后才能访问写作与设置。你可以使用 UniID 授权，或使用已绑定的 GitHub Key。',
+      loginSubtitleGithubOnly: '登录后才能访问写作与设置。当前可使用 GitHub Key 登录。',
       loginByUniId: '通过 UniID 授权登录',
       loginByGithubKey: '使用 GitHub Key 登录',
       githubKeyLabel: 'GitHub Key',
@@ -464,6 +465,7 @@ export const translations = {
     auth: {
       loginTitle: 'Sign in to continue',
       loginSubtitle: 'Sign in before accessing writing and settings. You can use UniID authorization or your bound GitHub key.',
+      loginSubtitleGithubOnly: 'Sign in before accessing writing and settings. GitHub Key sign-in is available now.',
       loginByUniId: 'Sign in with UniID',
       loginByGithubKey: 'Sign in with GitHub Key',
       githubKeyLabel: 'GitHub Key',
