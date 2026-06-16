@@ -32,6 +32,7 @@ interface ThemeContextType {
 interface AuthContextType {
   authState: AuthState;
   githubBindingStatus: 'bound' | 'unbound' | 'unknown';
+  isUniIdAvailable: boolean;
   loginByUniId: () => Promise<boolean>;
   loginByGithubKey: (key: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -191,6 +192,8 @@ const App: React.FC = () => {
     url: '',
     appId: '',
   });
+  const [isUniIdAvailable, setIsUniIdAvailable] = useState(false);
+  const [isUniIdAvailabilityChecked, setIsUniIdAvailabilityChecked] = useState(false);
   const uniIdService = useMemo(() => new UniIdService(uniIdConfig), [uniIdConfig]);
   const [githubBindingStatus, setGithubBindingStatus] = useState<'bound' | 'unbound' | 'unknown'>('unknown');
   const [language, setLanguageState] = useState<Language>(() => {
@@ -265,8 +268,57 @@ const App: React.FC = () => {
   const [initError, setInitError] = useState<string | null>(null);
 
   const canManage = authState.isUniIdAuthed || authState.isWriterUnlocked;
+  const hasUniIdConfig = Boolean(uniIdConfig.url.trim() && uniIdConfig.appId.trim());
 
   useEffect(() => {
+    if (configLoading) return;
+    if (!hasUniIdConfig) {
+      setIsUniIdAvailable(false);
+      setIsUniIdAvailabilityChecked(true);
+      return;
+    }
+
+    let cancelled = false;
+    setIsUniIdAvailable(false);
+    setIsUniIdAvailabilityChecked(false);
+    uniIdService
+      .init()
+      .then(() => {
+        if (!cancelled) {
+          setIsUniIdAvailable(true);
+          setIsUniIdAvailabilityChecked(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setIsUniIdAvailable(false);
+          setIsUniIdAvailabilityChecked(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [configLoading, hasUniIdConfig, uniIdService]);
+
+  useEffect(() => {
+    if (configLoading || !isUniIdAvailabilityChecked) return;
+
+    if (!isUniIdAvailable) {
+      const cachedWriter = localStorage.getItem('zenblog_writer_unlocked') === '1';
+      localStorage.removeItem('zenblog_uniid_token');
+      localStorage.removeItem('zenblog_uniid_user');
+      setGithubBindingStatus('unknown');
+      setAuthState((prev) => ({
+        ...prev,
+        isUniIdAuthed: false,
+        isWriterUnlocked: prev.isWriterUnlocked || cachedWriter,
+        uniIdToken: null,
+        uniIdUser: null,
+      }));
+      return;
+    }
+
     const restore = async () => {
       const cachedWriter = localStorage.getItem('zenblog_writer_unlocked') === '1';
       if (cachedWriter) {
@@ -303,7 +355,7 @@ const App: React.FC = () => {
       setGithubBindingStatus(boundStatus);
     };
     restore();
-  }, [uniIdService, uniIdConfig.url, uniIdConfig.appId]);
+  }, [configLoading, isUniIdAvailabilityChecked, isUniIdAvailable, uniIdService, uniIdConfig.url, uniIdConfig.appId]);
 
   // 从 /config.json 读取配置（main 分支中的静态文件）
   useEffect(() => {
@@ -474,20 +526,6 @@ const App: React.FC = () => {
   };
 
   const handleSaveConfigAndProfile = async (newConfig: GitHubConfig, newProfile: Profile) => {
-    // 1. 检查是否有实质性变更（不包含Token）
-    const oldPublicConfig: PublicConfig | null = config ? {
-      owner: config.owner,
-      repo: config.repo,
-      branch: config.branch
-    } : null;
-
-    const newPublicConfig: PublicConfig = {
-      owner: newConfig.owner,
-      repo: newConfig.repo,
-      branch: newConfig.branch
-    };
-
-    const isConfigChanged = JSON.stringify(oldPublicConfig) !== JSON.stringify(newPublicConfig);
     const isProfileChanged = JSON.stringify(profile) !== JSON.stringify(newProfile);
 
     // 2. 如果保存 profile 但没有 token，则不允许
@@ -536,6 +574,8 @@ const App: React.FC = () => {
   };
 
   const loginByUniId = async (): Promise<boolean> => {
+    if (!isUniIdAvailable) return false;
+
     const result = await uniIdService.login();
     if (result.cancelled || !result.token || !result.user) return false;
     let writerUnlocked = localStorage.getItem('zenblog_writer_unlocked') === '1';
@@ -637,13 +677,15 @@ const App: React.FC = () => {
 
     const updatedPosts = [...posts];
     const index = updatedPosts.findIndex((p) => p.id === id);
+    const existingPost = index > -1 ? updatedPosts[index] : undefined;
     const newPost: Post = {
       id,
       title: postData.title!,
       excerpt: postData.excerpt!,
       category: postData.category!,
-      date: postData.date || (index > -1 ? posts[index].date : new Date().toISOString()),
+      date: postData.date || existingPost?.date || new Date().toISOString(),
       contentPath,
+      reference: postData.reference ?? existingPost?.reference,
     };
     if (index > -1) updatedPosts[index] = newPost;
     else updatedPosts.unshift(newPost);
@@ -716,7 +758,7 @@ const App: React.FC = () => {
   return (
     <ThemeContext.Provider value={{ theme, setTheme, effectiveTheme }}>
       <LanguageContext.Provider value={{ language, t, setLanguage }}>
-        <AuthContext.Provider value={{ authState, githubBindingStatus, loginByUniId, loginByGithubKey, logout }}>
+        <AuthContext.Provider value={{ authState, githubBindingStatus, isUniIdAvailable, loginByUniId, loginByGithubKey, logout }}>
           <Router>
             <AppContent
               canManage={canManage}

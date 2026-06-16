@@ -8,7 +8,7 @@ const Login: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
-  const { loginByUniId, loginByGithubKey, authState } = useAuth();
+  const { loginByUniId, loginByGithubKey, authState, isUniIdAvailable } = useAuth();
   const [githubKey, setGithubKey] = useState('');
   const [loadingUniId, setLoadingUniId] = useState(false);
   const [loadingKey, setLoadingKey] = useState(false);
@@ -60,20 +60,24 @@ const Login: React.FC = () => {
           <ShieldCheck className="text-indigo-600 dark:text-indigo-400" />
           {t.auth.loginTitle}
         </h1>
-        <p className="text-gray-500 dark:text-gray-400 mb-8">{t.auth.loginSubtitle}</p>
+        <p className="text-gray-500 dark:text-gray-400 mb-8">
+          {isUniIdAvailable ? t.auth.loginSubtitle : t.auth.loginSubtitleGithubOnly}
+        </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button
-            type="button"
-            onClick={handleUniIdLogin}
-            disabled={loadingUniId || loadingKey}
-            className="w-full border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-2xl p-5 font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50"
-          >
-            <span className="inline-flex items-center gap-2">
-              <ShieldCheck size={18} />
-              {loadingUniId ? t.auth.logining : t.auth.loginByUniId}
-            </span>
-          </button>
+        <div className={`grid grid-cols-1 ${isUniIdAvailable ? 'md:grid-cols-2' : ''} gap-4`}>
+          {isUniIdAvailable && (
+            <button
+              type="button"
+              onClick={handleUniIdLogin}
+              disabled={loadingUniId || loadingKey}
+              className="w-full border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-2xl p-5 font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50"
+            >
+              <span className="inline-flex items-center gap-2">
+                <ShieldCheck size={18} />
+                {loadingUniId ? t.auth.logining : t.auth.loginByUniId}
+              </span>
+            </button>
+          )}
 
           <div className="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 bg-gray-50 dark:bg-gray-900/30">
             <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">

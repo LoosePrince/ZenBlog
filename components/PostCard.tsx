@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, ChevronRight, Edit3, ArrowRight } from 'lucide-react';
+import { Calendar, ChevronRight, Edit3, ArrowRight, Link as LinkIcon } from 'lucide-react';
 import { Post } from '../types';
 import { motion } from 'framer-motion';
 import { useLanguage, formatDate } from '../App';
@@ -22,6 +22,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, isAdmin }) => {
         <span className="px-4 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-black rounded-full uppercase tracking-widest">
           {post.category}
         </span>
+        {post.reference && (
+          <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 text-[10px] font-black rounded-full uppercase tracking-widest">
+            <LinkIcon size={12} />
+            {t.editor.referenceBadge}
+          </span>
+        )}
         {isAdmin && (
           <Link 
             to={`/edit/${post.id}`} 

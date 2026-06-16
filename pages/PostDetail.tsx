@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, ArrowLeft, Loader2, Edit3, Trash2, Clock, Share2, AlertTriangle, X } from 'lucide-react';
+import { Calendar, ArrowLeft, Loader2, Edit3, Trash2, Clock, Share2, AlertTriangle, X, Link as LinkIcon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Post, GitHubConfig, Profile, PublicConfig, ZenCommentRecord } from '../types';
@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth, useLanguage, useTheme, formatDate } from '../App';
 import toast from 'react-hot-toast';
 import { parseContentToSegments, getFileRawUrl, type ContentSegment } from '../utils/zenfile';
+import { fetchReferencedMarkdown } from '../utils/remoteMarkdown';
 import FileBlockView from '../components/FileBlockView';
 import CommentModerationActions from '../components/CommentModerationActions';
 import { UniIdService } from '../services/uniidService';
@@ -25,7 +26,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
-  const { authState } = useAuth();
+  const { authState, isUniIdAvailable } = useAuth();
   const { effectiveTheme } = useTheme();
   const [content, setContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -51,7 +52,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   const isDark = effectiveTheme === 'dark';
 
   const post = posts.find((p) => p.id === id);
-  const canComment = authState.isUniIdAuthed;
+  const canComment = isUniIdAvailable && authState.isUniIdAuthed;
 
   const commentRoots = useMemo(
     () =>
@@ -85,12 +86,23 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
     }
 
     const fetchContent = async () => {
+      setLoading(true);
+      setError(null);
+      const service = new GitHubService(config);
       try {
-        const service = new GitHubService(config);
-        const { content } = await service.getFile(post.contentPath);
-        setContent(content);
-        
-        // 获取文章作者信息
+        if (post.reference?.resolvedUrl || post.reference?.sourceUrl) {
+          try {
+            const remote = await fetchReferencedMarkdown(post.reference.resolvedUrl || post.reference.sourceUrl);
+            setContent(remote.content);
+          } catch {
+            const { content: snapshot } = await service.getFile(post.contentPath);
+            setContent(snapshot);
+          }
+        } else {
+          const { content } = await service.getFile(post.contentPath);
+          setContent(content);
+        }
+
         const authorInfo = await service.getFileAuthor(post.contentPath);
         setAuthor(authorInfo);
       } catch (err: any) {
@@ -101,7 +113,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
     };
 
     fetchContent();
-  }, [id, post, config, t]);
+  }, [id, post, config, t.post.loadError, t.post.notFound]);
 
   useEffect(() => {
     const loadPublicConfig = async () => {
@@ -183,7 +195,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   }, [config, post, segments]);
 
   const loadComments = async () => {
-    if (!post?.id || !isUniIdConfigReady) return;
+    if (!post?.id || !isUniIdConfigReady || !isUniIdAvailable) return;
     setCommentLoading(true);
     try {
       const service = new UniIdService(uniIdConfig);
@@ -198,10 +210,10 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   };
 
   useEffect(() => {
-    if (!isUniIdConfigReady) return;
+    if (!isUniIdConfigReady || !isUniIdAvailable) return;
     loadComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [post?.id, isUniIdConfigReady, isAdmin]);
+  }, [post?.id, isUniIdConfigReady, isUniIdAvailable, isAdmin]);
 
   const submitComment = async (content: string, parent?: ZenCommentRecord) => {
     if (!post?.id) return;
@@ -409,6 +421,20 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
               <Clock size={14} className="mr-1.5" />
               {readingTime} {t.post.minRead}
             </div>
+            {post.reference && (
+              <>
+                <div className="h-1 w-1 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+                <a
+                  href={post.reference.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 text-xs font-bold uppercase tracking-tight"
+                >
+                  <LinkIcon size={14} />
+                  {t.editor.referenceBadge}
+                </a>
+              </>
+            )}
           </div>
           
           <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-gray-900 dark:text-gray-100 mb-8 md:mb-10 leading-[1.1] tracking-tight">
@@ -495,6 +521,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
       </motion.div>
 
       <footer className="mt-16 md:mt-20 pt-10 border-t border-gray-100 dark:border-gray-800">
+        {isUniIdAvailable && (
         <section className="mb-10 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-6 md:p-8">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">{t.comment.title}</h3>
@@ -667,6 +694,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
             </div>
           )}
         </section>
+        )}
 
         <div className="bg-gray-50 dark:bg-gray-800 rounded-[2.5rem] p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-center md:text-left">
