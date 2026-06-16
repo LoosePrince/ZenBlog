@@ -103,7 +103,7 @@ export class UniIdService {
     const payload = { userId, githubKey, updatedAt: Date.now() };
     const existing = await client
       .from<{ userId: string; githubKey: string; updatedAt: number }>(BINDING_DATA_TYPE)
-      .where({ 'data.userId': userId })
+      .where({ userId })
       .select(['id', 'data.githubKey'])
       .limit(1)
       .first();
@@ -120,7 +120,7 @@ export class UniIdService {
     const client = this.getClient();
     const existing = await client
       .from<{ userId: string; githubKey: string }>(BINDING_DATA_TYPE)
-      .where({ 'data.userId': userId })
+      .where({ userId })
       .select(['id', 'data.githubKey'])
       .limit(1)
       .first();
@@ -135,13 +135,14 @@ export class UniIdService {
     await this.init();
     const client = this.getClient();
     const includePending = Boolean(opts?.includePending);
+    // UniID DataService.matchesWhere 对记录 data 做扁平匹配，键为 postId 而非 data.postId
     const filter = includePending
-      ? { 'data.postId': postId }
-      : { 'data.postId': postId, 'data.status': 'approved' };
+      ? { postId }
+      : { postId, status: 'approved' };
     const result = await client
       .from(COMMENT_DATA_TYPE)
       .where(filter)
-      .orderBy({ 'data.createdAt': 'asc' })
+      .orderBy({ createdAt: 'asc' })
       .limit(200)
       .run();
     return result.records
@@ -159,6 +160,7 @@ export class UniIdService {
     depth: 0 | 1;
   }): Promise<void> {
     await this.init();
+    const now = Date.now();
     await this.getClient().from(COMMENT_DATA_TYPE).insert({
       postId: payload.postId,
       content: payload.content,
@@ -170,11 +172,35 @@ export class UniIdService {
       parentCommentId: payload.parentCommentId,
       rootCommentId: payload.rootCommentId,
       depth: payload.depth,
+      createdAt: now,
+      updatedAt: now,
     });
   }
 
   async updateCommentStatus(commentId: string, status: CommentStatus): Promise<void> {
     await this.init();
-    await this.getClient().from(COMMENT_DATA_TYPE).update(commentId, { status });
+    await this.getClient().from(COMMENT_DATA_TYPE).update(commentId, {
+      status,
+      updatedAt: Date.now(),
+    });
+  }
+
+  async deleteComment(commentId: string): Promise<void> {
+    await this.init();
+    await this.getClient().from(COMMENT_DATA_TYPE).delete(commentId);
+  }
+
+  async listPendingComments(limit = 100): Promise<ZenCommentRecord[]> {
+    await this.init();
+    const result = await this.getClient()
+      .from(COMMENT_DATA_TYPE)
+      .where({ status: 'pending' })
+      .orderBy({ createdAt: 'desc' })
+      .limit(limit)
+      .run();
+    return result.records.map((item) => ({
+      id: item.id,
+      data: item.data as ZenCommentRecord['data'],
+    }));
   }
 }

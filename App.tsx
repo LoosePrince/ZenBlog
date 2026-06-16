@@ -9,6 +9,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import PostDetail from './pages/PostDetail';
 import Settings from './pages/Settings';
+import CommentModeration from './pages/CommentModeration';
 import { GitHubService } from './services/githubService';
 import { Language, translations } from './services/i18n';
 import { UniIdService } from './services/uniidService';
@@ -162,6 +163,7 @@ const AppContent: React.FC<{
                 <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
                 <Route path="/edit/:id" element={<ProtectedRoute><PageWrapper><Editor posts={posts} config={config} onSave={handleSavePost} /></PageWrapper></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><PageWrapper><Settings config={config} profile={profile} onSaveConfig={handleSaveConfig} onSaveProfile={handleSaveProfile} onSaveConfigAndProfile={handleSaveConfigAndProfile} /></PageWrapper></ProtectedRoute>} />
+                <Route path="/moderation/comments" element={<ProtectedRoute><PageWrapper><CommentModeration posts={posts} /></PageWrapper></ProtectedRoute>} />
                 <Route path="/about" element={<PageWrapper><About profile={profile} isAdmin={canManage} config={config} onSave={handleSaveProfile} /></PageWrapper>} />
               </Routes>
             </AnimatePresence>

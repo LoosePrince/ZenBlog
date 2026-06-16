@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Settings, PlusSquare, Home, User, Languages, Menu, X, Sun, Moon, Monitor, LogIn, LogOut } from 'lucide-react';
+import { Settings, PlusSquare, Home, User, Languages, Menu, X, Sun, Moon, Monitor, LogIn, LogOut, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage, useTheme, Theme } from '../App';
 import { Profile } from '../types';
@@ -53,6 +53,7 @@ const Navbar: React.FC<NavbarProps> = ({ canManage, isUniIdAuthed, isWriterUnloc
 
   const adminItems = [
     { label: t.nav.newPost, path: '/edit/new', icon: PlusSquare },
+    { label: t.nav.commentModeration, path: '/moderation/comments', icon: MessageSquare },
     { label: t.nav.settings, path: '/settings', icon: Settings },
   ];
 

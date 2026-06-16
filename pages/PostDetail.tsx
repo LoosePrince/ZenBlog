@@ -3,13 +3,14 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Calendar, ArrowLeft, Loader2, Edit3, Trash2, Clock, Share2, AlertTriangle, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { CommentStatus, Post, GitHubConfig, Profile, PublicConfig, ZenCommentRecord } from '../types';
+import { Post, GitHubConfig, Profile, PublicConfig, ZenCommentRecord } from '../types';
 import { GitHubService } from '../services/githubService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth, useLanguage, useTheme, formatDate } from '../App';
 import toast from 'react-hot-toast';
 import { parseContentToSegments, getFileRawUrl, type ContentSegment } from '../utils/zenfile';
 import FileBlockView from '../components/FileBlockView';
+import CommentModerationActions from '../components/CommentModerationActions';
 import { UniIdService } from '../services/uniidService';
 
 interface PostDetailProps {
@@ -37,6 +38,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   const [comments, setComments] = useState<ZenCommentRecord[]>([]);
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [moderatingId, setModeratingId] = useState<string | null>(null);
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
@@ -68,6 +70,11 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
         c.data.rootCommentId === rootId &&
         (c.data.status === 'approved' || (isAdmin && c.data.status === 'pending'))
     );
+
+  const pendingOnPost = useMemo(
+    () => comments.filter((c) => c.data.status === 'pending').length,
+    [comments]
+  );
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -243,21 +250,39 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
     }
   };
 
-  const reviewComment = async (commentId: string, status: CommentStatus) => {
+  const approveComment = async (commentId: string) => {
     if (!isUniIdConfigReady) {
       toast.error('评论服务配置未就绪');
       return;
     }
-    setCommentSubmitting(true);
+    setModeratingId(commentId);
     try {
       const service = new UniIdService(uniIdConfig);
-      await service.updateCommentStatus(commentId, status);
-      toast.success(status === 'approved' ? t.comment.approveSuccess : t.comment.rejectSuccess);
+      await service.updateCommentStatus(commentId, 'approved');
+      toast.success(t.comment.approveSuccess);
       await loadComments();
     } catch (err: any) {
       toast.error(`${t.comment.reviewFailed}: ${err.message || 'unknown error'}`);
     } finally {
-      setCommentSubmitting(false);
+      setModeratingId(null);
+    }
+  };
+
+  const deleteComment = async (commentId: string) => {
+    if (!isUniIdConfigReady) {
+      toast.error('评论服务配置未就绪');
+      return;
+    }
+    setModeratingId(commentId);
+    try {
+      const service = new UniIdService(uniIdConfig);
+      await service.deleteComment(commentId);
+      toast.success(t.comment.deleteSuccess);
+      await loadComments();
+    } catch (err: any) {
+      toast.error(`${t.comment.deleteFailed}: ${err.message || 'unknown error'}`);
+    } finally {
+      setModeratingId(null);
     }
   };
 
@@ -471,7 +496,30 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
 
       <footer className="mt-16 md:mt-20 pt-10 border-t border-gray-100 dark:border-gray-800">
         <section className="mb-10 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-6 md:p-8">
-          <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-4">{t.comment.title}</h3>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">{t.comment.title}</h3>
+            {isAdmin && (
+              <Link
+                to="/moderation/comments"
+                className="text-xs font-bold text-indigo-600 hover:underline dark:text-indigo-400"
+              >
+                {t.comment.moderation.openCenter}
+              </Link>
+            )}
+          </div>
+          {isAdmin && pendingOnPost > 0 && (
+            <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-900/20 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                {t.comment.moderation.banner.replace('{count}', String(pendingOnPost))}
+              </p>
+              <Link
+                to="/moderation/comments"
+                className="inline-flex items-center justify-center rounded-xl bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700"
+              >
+                {t.comment.moderation.openCenter}
+              </Link>
+            </div>
+          )}
           {!canComment ? (
             <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               {t.comment.loginHint}{' '}
@@ -510,7 +558,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
               {commentRoots.map((comment) => {
                 const replies = getReplies(comment.id);
                 return (
-                  <div key={comment.id} className="border border-gray-100 dark:border-gray-700 rounded-2xl p-4">
+                  <div key={comment.id} className={`border rounded-2xl p-4 ${comment.data.status === 'pending' && isAdmin ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-900/10' : 'border-gray-100 dark:border-gray-700'}`}>
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
                         {comment.data.author.username}
@@ -527,7 +575,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
                       </div>
                     </div>
                     <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{comment.data.content}</p>
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
                       {canComment && (
                         <button
                           type="button"
@@ -541,24 +589,14 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
                         </button>
                       )}
                       {isAdmin && comment.data.status === 'pending' && (
-                        <>
-                          <button
-                            type="button"
-                            disabled={commentSubmitting}
-                            onClick={() => reviewComment(comment.id, 'approved')}
-                            className="text-xs text-green-600 dark:text-green-400 font-bold"
-                          >
-                            {t.comment.approve}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={commentSubmitting}
-                            onClick={() => reviewComment(comment.id, 'rejected')}
-                            className="text-xs text-red-600 dark:text-red-400 font-bold"
-                          >
-                            {t.comment.reject}
-                          </button>
-                        </>
+                        <CommentModerationActions
+                          commentId={comment.id}
+                          busyId={moderatingId}
+                          onApprove={approveComment}
+                          onDelete={deleteComment}
+                          approveLabel={t.comment.moderation.approveShow}
+                          deleteLabel={t.comment.moderation.deleteRemove}
+                        />
                       )}
                     </div>
                     {replyingTo === comment.id && canComment && (
@@ -592,7 +630,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
                     {replies.length > 0 && (
                       <div className="mt-4 space-y-3 pl-4 border-l-2 border-gray-100 dark:border-gray-700">
                         {replies.map((reply) => (
-                          <div key={reply.id} className="rounded-xl bg-gray-50 dark:bg-gray-900 p-3">
+                          <div key={reply.id} className={`rounded-xl p-3 ${reply.data.status === 'pending' && isAdmin ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-900'}`}>
                             <div className="flex items-center justify-between mb-1">
                               <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{reply.data.author.username}</p>
                               <div className="flex items-center gap-2">
@@ -608,23 +646,15 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
                             </div>
                             <p className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{reply.data.content}</p>
                             {isAdmin && reply.data.status === 'pending' && (
-                              <div className="mt-2 flex gap-2">
-                                <button
-                                  type="button"
-                                  disabled={commentSubmitting}
-                                  onClick={() => reviewComment(reply.id, 'approved')}
-                                  className="text-[10px] text-green-600 dark:text-green-400 font-bold"
-                                >
-                                  {t.comment.approve}
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={commentSubmitting}
-                                  onClick={() => reviewComment(reply.id, 'rejected')}
-                                  className="text-[10px] text-red-600 dark:text-red-400 font-bold"
-                                >
-                                  {t.comment.reject}
-                                </button>
+                              <div className="mt-2">
+                                <CommentModerationActions
+                                  commentId={reply.id}
+                                  busyId={moderatingId}
+                                  onApprove={approveComment}
+                                  onDelete={deleteComment}
+                                  approveLabel={t.comment.moderation.approveShow}
+                                  deleteLabel={t.comment.moderation.deleteRemove}
+                                />
                               </div>
                             )}
                           </div>
