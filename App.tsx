@@ -185,8 +185,8 @@ const App: React.FC = () => {
     uniIdToken: null,
     uniIdUser: null,
   });
-  const [uniIdConfig, setUniIdConfig] = useState<{ authServer: string; appId: string }>({
-    authServer: '',
+  const [uniIdConfig, setUniIdConfig] = useState<{ url: string; appId: string }>({
+    url: '',
     appId: '',
   });
   const uniIdService = useMemo(() => new UniIdService(uniIdConfig), [uniIdConfig]);
@@ -266,78 +266,42 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const restore = async () => {
-      const cachedToken = localStorage.getItem('zenblog_uniid_token');
-      const cachedUser = localStorage.getItem('zenblog_uniid_user');
       const cachedWriter = localStorage.getItem('zenblog_writer_unlocked') === '1';
       if (cachedWriter) {
         setAuthState((prev) => ({ ...prev, isWriterUnlocked: true }));
       }
-      if (!cachedToken) return;
 
-      const uniIdReady = Boolean(uniIdConfig.authServer?.trim() && uniIdConfig.appId?.trim());
-      // 在 /config.json 尚未写入 uniIdConfig 之前，authServer 为空，checkToken 会请求到本站错误路径并误判失效，
-      // 进而清除 localStorage。此处先按缓存恢复会话，待配置就绪后再向 UniID 服务端校验。
-      if (!uniIdReady) {
-        try {
-          const user = cachedUser ? (JSON.parse(cachedUser) as AuthState['uniIdUser']) : null;
-          setAuthState((prev) => ({
-            ...prev,
-            isUniIdAuthed: true,
-            uniIdToken: cachedToken,
-            uniIdUser: user,
-            isWriterUnlocked: prev.isWriterUnlocked || cachedWriter,
-          }));
-        } catch {
-          setAuthState((prev) => ({
-            ...prev,
-            isUniIdAuthed: true,
-            uniIdToken: cachedToken,
-            uniIdUser: null,
-            isWriterUnlocked: prev.isWriterUnlocked || cachedWriter,
-          }));
-        }
-        return;
-      }
+      const uniIdReady = Boolean(uniIdConfig.url?.trim() && uniIdConfig.appId?.trim());
+      if (!uniIdReady) return;
 
-      const checked = await uniIdService.checkToken(cachedToken);
-      if (checked.valid) {
-        let boundStatus: 'bound' | 'unbound' | 'unknown' = 'unknown';
-        let parsedCachedUser: AuthState['uniIdUser'] = null;
-        try {
-          parsedCachedUser = cachedUser ? JSON.parse(cachedUser) : null;
-        } catch {
-          parsedCachedUser = null;
-        }
-        const userId = checked.user?.id ?? parsedCachedUser?.id;
-        if (userId) {
-          try {
-            const bindingKey = await uniIdService.getGitHubBinding(userId);
-            boundStatus = bindingKey ? 'bound' : 'unbound';
-          } catch {
-            boundStatus = 'unknown';
-          }
-        }
-        setAuthState({
-          isUniIdAuthed: true,
-          isWriterUnlocked: cachedWriter,
-          uniIdToken: cachedToken,
-          uniIdUser: checked.user ?? parsedCachedUser,
-        });
-        setGithubBindingStatus(boundStatus);
-      } else {
+      const restored = await uniIdService.restoreSession();
+      if (!restored.valid || !restored.token) {
         localStorage.removeItem('zenblog_uniid_token');
         localStorage.removeItem('zenblog_uniid_user');
         setGithubBindingStatus('unknown');
-        setAuthState((prev) => ({
-          ...prev,
-          isUniIdAuthed: false,
-          uniIdToken: null,
-          uniIdUser: null,
-        }));
+        return;
       }
+
+      let boundStatus: 'bound' | 'unbound' | 'unknown' = 'unknown';
+      const userId = restored.user?.id;
+      if (userId) {
+        try {
+          const bindingKey = await uniIdService.getGitHubBinding(userId);
+          boundStatus = bindingKey ? 'bound' : 'unbound';
+        } catch {
+          boundStatus = 'unknown';
+        }
+      }
+      setAuthState({
+        isUniIdAuthed: true,
+        isWriterUnlocked: cachedWriter,
+        uniIdToken: restored.token,
+        uniIdUser: restored.user,
+      });
+      setGithubBindingStatus(boundStatus);
     };
     restore();
-  }, [uniIdService, uniIdConfig.authServer, uniIdConfig.appId]);
+  }, [uniIdService, uniIdConfig.url, uniIdConfig.appId]);
 
   // 从 /config.json 读取配置（main 分支中的静态文件）
   useEffect(() => {
@@ -349,9 +313,9 @@ const App: React.FC = () => {
         if (response.ok) {
           publicConfig = await response.json();
         }
-        if (publicConfig?.uniid?.authServer && publicConfig?.uniid?.appId) {
+        if (publicConfig?.uniid?.url && publicConfig?.uniid?.appId) {
           setUniIdConfig({
-            authServer: publicConfig.uniid.authServer,
+            url: publicConfig.uniid.url,
             appId: publicConfig.uniid.appId,
           });
         }
@@ -572,8 +536,6 @@ const App: React.FC = () => {
   const loginByUniId = async (): Promise<boolean> => {
     const result = await uniIdService.login();
     if (result.cancelled || !result.token || !result.user) return false;
-    localStorage.setItem('zenblog_uniid_token', result.token);
-    localStorage.setItem('zenblog_uniid_user', JSON.stringify(result.user));
     let writerUnlocked = localStorage.getItem('zenblog_writer_unlocked') === '1';
     let configToken = config?.token || '';
     if (!configToken && result.user.id) {

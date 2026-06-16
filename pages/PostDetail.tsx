@@ -40,11 +40,11 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
-  const [uniIdConfig, setUniIdConfig] = useState<{ authServer: string; appId: string }>({
-    authServer: '',
+  const [uniIdConfig, setUniIdConfig] = useState<{ url: string; appId: string }>({
+    url: '',
     appId: '',
   });
-  const isUniIdConfigReady = Boolean(uniIdConfig.authServer && uniIdConfig.appId);
+  const isUniIdConfigReady = Boolean(uniIdConfig.url && uniIdConfig.appId);
 
   const isDark = effectiveTheme === 'dark';
 
@@ -102,8 +102,8 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
         const response = await fetch('/config.json');
         if (!response.ok) return;
         const cfg: PublicConfig = await response.json();
-        if (cfg.uniid?.authServer && cfg.uniid?.appId) {
-          setUniIdConfig({ authServer: cfg.uniid.authServer, appId: cfg.uniid.appId });
+        if (cfg.uniid?.url && cfg.uniid?.appId) {
+          setUniIdConfig({ url: cfg.uniid.url, appId: cfg.uniid.appId });
         }
       } catch {}
     };

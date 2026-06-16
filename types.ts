@@ -132,7 +132,7 @@ export interface AppState {
 }
 
 export interface UniIdConfig {
-  authServer: string;
+  url: string;
   appId: string;
 }
 
