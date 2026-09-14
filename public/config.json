@@ -1,9 +1,5 @@
 {
   "owner": "LoosePrince",
   "repo": "ZenBlog",
-  "branch": "data",
-  "uniid": {
-    "url": "https://uniid.xzt.plus",
-    "appId": "cmqgucl9c000d5lswtj8rbfpr"
-  }
+  "branch": "data"
 }
