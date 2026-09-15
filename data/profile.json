@@ -40,102 +40,14 @@
       }
     ],
     "skills": {
-      "design": [
-        {
-          "name": "UI/UX设计",
-          "level": 65,
-          "desc": "中专UI设计专业，作品曾参展，熟练使用设计工具"
-        },
-        {
-          "name": "平面设计",
-          "level": 55,
-          "desc": "熟悉Photoshop、Illustrator，擅长品牌设计与视觉创意表达"
-        },
-        {
-          "name": "新媒体运营",
-          "level": 45,
-          "desc": "有运营支持和新媒体运营工作经验"
-        }
-      ],
-      "programming": [
-        {
-          "name": "前端开发",
-          "level": 74,
-          "desc": "熟练掌握HTML、CSS、JavaScript，熟悉Vue、React等前端框架"
-        },
-        {
-          "name": "Python",
-          "level": 65,
-          "desc": "掌握Python数据分析与处理"
-        },
-        {
-          "name": "后端开发",
-          "level": 55,
-          "desc": "掌握Node.js、PHP，有全栈开发项目经验"
-        },
-        {
-          "name": "数据库",
-          "level": 60,
-          "desc": "掌握MySQL、PostgreSQL等数据库"
-        }
-      ],
-      "other": [
-        {
-          "name": "项目管理",
-          "level": 70,
-          "desc": "具备团队组建、扩充经验，项目管理与协调经验，能独挡一面"
-        },
-        {
-          "name": "写作能力",
-          "level": 60,
-          "desc": "善于内容创作与技术文档编写，有一定的文字功底"
-        },
-        {
-          "name": "沟通协作",
-          "level": 75,
-          "desc": "优秀的团队协作能力，擅长沟通"
-        }
-      ]
+      "programming": [],
+      "other": []
     },
     "skillCategoryLabels": {
-      "design": "设计",
       "programming": "编程",
       "other": "其他"
     },
-    "works": [
-      {
-        "title": "游戏服务器官网",
-        "desc": "前端开发项目，展示服务器信息和玩家社区。",
-        "tags": [
-          "前端",
-          "HTML/CSS"
-        ]
-      },
-      {
-        "title": "博客网站",
-        "desc": "PHP全栈自主开发，支持文章发布和管理功能。",
-        "tags": [
-          "全栈",
-          "PHP"
-        ]
-      },
-      {
-        "title": "聊天网站",
-        "desc": "Vue + Node.js 全栈开发，实时聊天功能。",
-        "tags": [
-          "Vue",
-          "Node.js"
-        ]
-      },
-      {
-        "title": "AI文件整理",
-        "desc": "Python开发，使用AI技术进行文件智能分类。",
-        "tags": [
-          "Python",
-          "AI"
-        ]
-      }
-    ],
+    "works": [],
     "music": {
       "name": "明天你好",
       "subtitle": "SER - 钢琴独奏版",
