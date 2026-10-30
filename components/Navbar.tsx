@@ -7,13 +7,12 @@ import { Profile } from '../types';
 
 interface NavbarProps {
   canManage: boolean;
-  isUniIdAuthed: boolean;
   isWriterUnlocked: boolean;
   onLogout: () => Promise<void>;
   profile: Profile;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ canManage, isUniIdAuthed, isWriterUnlocked, onLogout, profile }) => {
+const Navbar: React.FC<NavbarProps> = ({ canManage, isWriterUnlocked, onLogout, profile }) => {
   const location = useLocation();
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
@@ -189,7 +188,7 @@ const Navbar: React.FC<NavbarProps> = ({ canManage, isUniIdAuthed, isWriterUnloc
               <button
                 onClick={onLogout}
                 className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50"
-                title={`${isUniIdAuthed ? 'UniID' : ''}${isUniIdAuthed && isWriterUnlocked ? ' + ' : ''}${isWriterUnlocked ? 'GitHub Key' : ''}`}
+                title={isWriterUnlocked ? 'GitHub Key' : ''}
               >
                 <LogOut size={14} />
                 <span className="hidden sm:inline">{t.nav.logout}</span>

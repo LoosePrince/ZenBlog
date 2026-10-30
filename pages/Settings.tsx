@@ -39,7 +39,7 @@ const Settings: React.FC<SettingsProps> = ({
   onSaveConfigAndProfile: _onSaveConfigAndProfile,
 }) => {
   const { t } = useLanguage();
-  const { authState, githubBindingStatus, isUniIdAvailable } = useAuth();
+  const { authState } = useAuth();
   const [token, setToken] = useState(config?.token || '');
   const [activeMobileSection, setActiveMobileSection] = useState<MobileSection>('storage');
 
@@ -227,31 +227,6 @@ const Settings: React.FC<SettingsProps> = ({
                     </a>
                   </div>
                 </div>
-                {isUniIdAvailable && (
-                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-600 dark:bg-slate-800/60">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{t.settings.githubBinding}</p>
-                    <span
-                      className={`text-xs font-medium ${
-                        githubBindingStatus === 'bound'
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : githubBindingStatus === 'unbound'
-                            ? 'text-amber-600 dark:text-amber-400'
-                            : 'text-slate-500 dark:text-slate-400'
-                      }`}
-                    >
-                      {!authState.isUniIdAuthed
-                        ? t.settings.githubBindingNeedUniId
-                        : githubBindingStatus === 'bound'
-                          ? t.settings.githubBindingBound
-                          : githubBindingStatus === 'unbound'
-                            ? t.settings.githubBindingUnbound
-                            : t.settings.githubBindingUnknown}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.settings.githubBindingHint}</p>
-                </div>
-                )}
               </div>
               <div className="hidden justify-end border-t border-slate-200 bg-slate-50/90 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/50 sm:px-5 lg:flex">
                 <button type="button" onClick={handleSaveConfig} disabled={anySaving} className={btnPrimary}>

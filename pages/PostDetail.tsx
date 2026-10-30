@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Calendar, ArrowLeft, Loader2, Edit3, Trash2, Clock, Share2, AlertTriangle, X, Link as LinkIcon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Post, GitHubConfig, Profile, PublicConfig, ZenCommentRecord } from '../types';
+import { Post, GitHubConfig, Profile, PublicConfig } from '../types';
 import { GitHubService } from '../services/githubService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth, useLanguage, useTheme, formatDate } from '../App';
@@ -11,8 +11,6 @@ import toast from 'react-hot-toast';
 import { parseContentToSegments, getFileRawUrl, type ContentSegment } from '../utils/zenfile';
 import { fetchReferencedMarkdown } from '../utils/remoteMarkdown';
 import FileBlockView from '../components/FileBlockView';
-import CommentModerationActions from '../components/CommentModerationActions';
-import { UniIdService } from '../services/uniidService';
 
 interface PostDetailProps {
   posts: Post[];
@@ -26,7 +24,6 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
-  const { authState, isUniIdAvailable } = useAuth();
   const { effectiveTheme } = useTheme();
   const [content, setContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -36,47 +33,9 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
   const [fileTxtPreviews, setFileTxtPreviews] = useState<Record<string, string>>({});
   const [fileProgress, setFileProgress] = useState<{ loaded: number; total: number }>({ loaded: 0, total: 0 });
-  const [comments, setComments] = useState<ZenCommentRecord[]>([]);
-  const [commentLoading, setCommentLoading] = useState(false);
-  const [commentSubmitting, setCommentSubmitting] = useState(false);
-  const [moderatingId, setModeratingId] = useState<string | null>(null);
-  const [newComment, setNewComment] = useState('');
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState('');
-  const [uniIdConfig, setUniIdConfig] = useState<{ url: string; appId: string }>({
-    url: '',
-    appId: '',
-  });
-  const isUniIdConfigReady = Boolean(uniIdConfig.url && uniIdConfig.appId);
-
   const isDark = effectiveTheme === 'dark';
 
   const post = posts.find((p) => p.id === id);
-  const canComment = isUniIdAvailable && authState.isUniIdAuthed;
-
-  const commentRoots = useMemo(
-    () =>
-      comments.filter(
-        (c) =>
-          c.data.depth === 0 &&
-          (c.data.status === 'approved' || (isAdmin && c.data.status === 'pending'))
-      ),
-    [comments, isAdmin]
-  );
-
-  const getReplies = (rootId: string) =>
-    comments.filter(
-      (c) =>
-        c.data.depth === 1 &&
-        c.data.rootCommentId === rootId &&
-        (c.data.status === 'approved' || (isAdmin && c.data.status === 'pending'))
-    );
-
-  const pendingOnPost = useMemo(
-    () => comments.filter((c) => c.data.status === 'pending').length,
-    [comments]
-  );
-
   useEffect(() => {
     window.scrollTo(0, 0);
     if (!post || !config) {
@@ -121,9 +80,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
         const response = await fetch('/config.json');
         if (!response.ok) return;
         const cfg: PublicConfig = await response.json();
-        if (cfg.uniid?.url && cfg.uniid?.appId) {
-          setUniIdConfig({ url: cfg.uniid.url, appId: cfg.uniid.appId });
-        }
+        void cfg;
       } catch {}
     };
     loadPublicConfig();
@@ -194,109 +151,6 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
     };
   }, [config, post, segments]);
 
-  const loadComments = async () => {
-    if (!post?.id || !isUniIdConfigReady || !isUniIdAvailable) return;
-    setCommentLoading(true);
-    try {
-      const service = new UniIdService(uniIdConfig);
-      await service.ensureCommentSchema();
-      const list = await service.listComments(post.id, { includePending: isAdmin });
-      setComments(list);
-    } catch (err: any) {
-      toast.error(`${t.comment.loadFailed}: ${err.message || 'unknown error'}`);
-    } finally {
-      setCommentLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!isUniIdConfigReady || !isUniIdAvailable) return;
-    loadComments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [post?.id, isUniIdConfigReady, isUniIdAvailable, isAdmin]);
-
-  const submitComment = async (content: string, parent?: ZenCommentRecord) => {
-    if (!post?.id) return;
-    if (!isUniIdConfigReady) {
-      toast.error('评论服务配置未就绪');
-      return;
-    }
-    if (!canComment || !authState.uniIdUser?.id) {
-      toast.error(t.comment.loginRequired);
-      return;
-    }
-    const trimmed = content.trim();
-    if (!trimmed) {
-      toast.error(t.comment.empty);
-      return;
-    }
-    if (trimmed.length > 1000) {
-      toast.error(t.comment.tooLong);
-      return;
-    }
-    const depth: 0 | 1 = parent ? 1 : 0;
-    const rootCommentId = parent ? (parent.data.depth === 0 ? parent.id : parent.data.rootCommentId) : null;
-    const parentCommentId = parent ? parent.id : null;
-
-    setCommentSubmitting(true);
-    try {
-      const service = new UniIdService(uniIdConfig);
-      await service.createComment({
-        postId: post.id,
-        content: trimmed,
-        userId: authState.uniIdUser.id,
-        username: authState.uniIdUser.username || 'user',
-        parentCommentId,
-        rootCommentId,
-        depth,
-      });
-      toast.success(t.comment.submitSuccess);
-      setNewComment('');
-      setReplyText('');
-      setReplyingTo(null);
-      await loadComments();
-    } catch (err: any) {
-      toast.error(`${t.comment.submitFailed}: ${err.message || 'unknown error'}`);
-    } finally {
-      setCommentSubmitting(false);
-    }
-  };
-
-  const approveComment = async (commentId: string) => {
-    if (!isUniIdConfigReady) {
-      toast.error('评论服务配置未就绪');
-      return;
-    }
-    setModeratingId(commentId);
-    try {
-      const service = new UniIdService(uniIdConfig);
-      await service.updateCommentStatus(commentId, 'approved');
-      toast.success(t.comment.approveSuccess);
-      await loadComments();
-    } catch (err: any) {
-      toast.error(`${t.comment.reviewFailed}: ${err.message || 'unknown error'}`);
-    } finally {
-      setModeratingId(null);
-    }
-  };
-
-  const deleteComment = async (commentId: string) => {
-    if (!isUniIdConfigReady) {
-      toast.error('评论服务配置未就绪');
-      return;
-    }
-    setModeratingId(commentId);
-    try {
-      const service = new UniIdService(uniIdConfig);
-      await service.deleteComment(commentId);
-      toast.success(t.comment.deleteSuccess);
-      await loadComments();
-    } catch (err: any) {
-      toast.error(`${t.comment.deleteFailed}: ${err.message || 'unknown error'}`);
-    } finally {
-      setModeratingId(null);
-    }
-  };
 
   const handleDeleteClick = () => {
     setShowDeleteModal(true);
@@ -521,181 +375,6 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
       </motion.div>
 
       <footer className="mt-16 md:mt-20 pt-10 border-t border-gray-100 dark:border-gray-800">
-        {isUniIdAvailable && (
-        <section className="mb-10 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-6 md:p-8">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">{t.comment.title}</h3>
-            {isAdmin && (
-              <Link
-                to="/moderation/comments"
-                className="text-xs font-bold text-indigo-600 hover:underline dark:text-indigo-400"
-              >
-                {t.comment.moderation.openCenter}
-              </Link>
-            )}
-          </div>
-          {isAdmin && pendingOnPost > 0 && (
-            <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-900/20 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                {t.comment.moderation.banner.replace('{count}', String(pendingOnPost))}
-              </p>
-              <Link
-                to="/moderation/comments"
-                className="inline-flex items-center justify-center rounded-xl bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700"
-              >
-                {t.comment.moderation.openCenter}
-              </Link>
-            </div>
-          )}
-          {!canComment ? (
-            <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {t.comment.loginHint}{' '}
-              <Link to="/login" className="text-indigo-600 dark:text-indigo-400 font-bold">
-                {t.comment.goLogin}
-              </Link>
-            </div>
-          ) : (
-            <div className="mb-6">
-              <textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                rows={3}
-                placeholder={t.comment.placeholder}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-              />
-              <div className="mt-3 flex justify-end">
-                <button
-                  type="button"
-                  disabled={commentSubmitting}
-                  onClick={() => submitComment(newComment)}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold disabled:opacity-50"
-                >
-                  {t.comment.submit}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {commentLoading ? (
-            <p className="text-sm text-gray-400 dark:text-gray-500">{t.comment.loading}</p>
-          ) : commentRoots.length === 0 ? (
-            <p className="text-sm text-gray-400 dark:text-gray-500">{t.comment.emptyList}</p>
-          ) : (
-            <div className="space-y-4">
-              {commentRoots.map((comment) => {
-                const replies = getReplies(comment.id);
-                return (
-                  <div key={comment.id} className={`border rounded-2xl p-4 ${comment.data.status === 'pending' && isAdmin ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-900/10' : 'border-gray-100 dark:border-gray-700'}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
-                        {comment.data.author.username}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        {comment.data.status === 'pending' && (
-                          <span className="text-[10px] px-2 py-1 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                            {t.comment.pending}
-                          </span>
-                        )}
-                        <span className="text-xs text-gray-400 dark:text-gray-500">
-                          {new Date(comment.data.createdAt).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{comment.data.content}</p>
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
-                      {canComment && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setReplyingTo(replyingTo === comment.id ? null : comment.id);
-                            setReplyText('');
-                          }}
-                          className="text-xs text-indigo-600 dark:text-indigo-400 font-bold"
-                        >
-                          {t.comment.reply}
-                        </button>
-                      )}
-                      {isAdmin && comment.data.status === 'pending' && (
-                        <CommentModerationActions
-                          commentId={comment.id}
-                          busyId={moderatingId}
-                          onApprove={approveComment}
-                          onDelete={deleteComment}
-                          approveLabel={t.comment.moderation.approveShow}
-                          deleteLabel={t.comment.moderation.deleteRemove}
-                        />
-                      )}
-                    </div>
-                    {replyingTo === comment.id && canComment && (
-                      <div className="mt-3">
-                        <textarea
-                          value={replyText}
-                          onChange={(e) => setReplyText(e.target.value)}
-                          rows={2}
-                          placeholder={t.comment.replyPlaceholder}
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                        />
-                        <div className="mt-2 flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setReplyingTo(null)}
-                            className="text-xs px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600"
-                          >
-                            {t.common.cancel}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={commentSubmitting}
-                            onClick={() => submitComment(replyText, comment)}
-                            className="text-xs px-3 py-1 rounded-lg bg-indigo-600 text-white disabled:opacity-50"
-                          >
-                            {t.comment.submitReply}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {replies.length > 0 && (
-                      <div className="mt-4 space-y-3 pl-4 border-l-2 border-gray-100 dark:border-gray-700">
-                        {replies.map((reply) => (
-                          <div key={reply.id} className={`rounded-xl p-3 ${reply.data.status === 'pending' && isAdmin ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-900'}`}>
-                            <div className="flex items-center justify-between mb-1">
-                              <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{reply.data.author.username}</p>
-                              <div className="flex items-center gap-2">
-                                {reply.data.status === 'pending' && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                                    {t.comment.pending}
-                                  </span>
-                                )}
-                                <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                                  {new Date(reply.data.createdAt).toLocaleString()}
-                                </span>
-                              </div>
-                            </div>
-                            <p className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{reply.data.content}</p>
-                            {isAdmin && reply.data.status === 'pending' && (
-                              <div className="mt-2">
-                                <CommentModerationActions
-                                  commentId={reply.id}
-                                  busyId={moderatingId}
-                                  onApprove={approveComment}
-                                  onDelete={deleteComment}
-                                  approveLabel={t.comment.moderation.approveShow}
-                                  deleteLabel={t.comment.moderation.deleteRemove}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-        )}
-
         <div className="bg-gray-50 dark:bg-gray-800 rounded-[2.5rem] p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-center md:text-left">
             <h4 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-2 italic">{t.post.enjoyed}</h4>

@@ -9,10 +9,8 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import PostDetail from './pages/PostDetail';
 import Settings from './pages/Settings';
-import CommentModeration from './pages/CommentModeration';
 import { GitHubService } from './services/githubService';
 import { Language, translations } from './services/i18n';
-import { UniIdService } from './services/uniidService';
 import { AuthState, FileChange, GitHubConfig, Post, Profile, PublicConfig } from './types';
 
 export type Theme = 'light' | 'dark' | 'auto';
@@ -31,9 +29,6 @@ interface ThemeContextType {
 
 interface AuthContextType {
   authState: AuthState;
-  githubBindingStatus: 'bound' | 'unbound' | 'unknown';
-  isUniIdAvailable: boolean;
-  loginByUniId: () => Promise<boolean>;
   loginByGithubKey: (key: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -108,7 +103,7 @@ const AppContent: React.FC<{
     const { t } = useLanguage();
 
     const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-      if (!authState.isUniIdAuthed && !authState.isWriterUnlocked) {
+      if (!authState.isWriterUnlocked) {
         return <Navigate to="/login" state={{ from: location.pathname }} replace />;
       }
       return <>{children}</>;
@@ -119,7 +114,6 @@ const AppContent: React.FC<{
         <Toaster position="top-center" reverseOrder={false} />
         <Navbar
           canManage={canManage}
-          isUniIdAuthed={authState.isUniIdAuthed}
           isWriterUnlocked={authState.isWriterUnlocked}
           onLogout={logout}
           profile={profile}
@@ -164,7 +158,6 @@ const AppContent: React.FC<{
                 <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
                 <Route path="/edit/:id" element={<ProtectedRoute><PageWrapper><Editor posts={posts} config={config} onSave={handleSavePost} /></PageWrapper></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><PageWrapper><Settings config={config} profile={profile} onSaveConfig={handleSaveConfig} onSaveProfile={handleSaveProfile} onSaveConfigAndProfile={handleSaveConfigAndProfile} /></PageWrapper></ProtectedRoute>} />
-                <Route path="/moderation/comments" element={<ProtectedRoute><PageWrapper><CommentModeration posts={posts} /></PageWrapper></ProtectedRoute>} />
                 <Route path="/about" element={<PageWrapper><About profile={profile} isAdmin={canManage} config={config} onSave={handleSaveProfile} /></PageWrapper>} />
               </Routes>
             </AnimatePresence>
@@ -183,19 +176,8 @@ const AppContent: React.FC<{
 
 const App: React.FC = () => {
   const [authState, setAuthState] = useState<AuthState>({
-    isUniIdAuthed: false,
     isWriterUnlocked: false,
-    uniIdToken: null,
-    uniIdUser: null,
   });
-  const [uniIdConfig, setUniIdConfig] = useState<{ url: string; appId: string }>({
-    url: '',
-    appId: '',
-  });
-  const [isUniIdAvailable, setIsUniIdAvailable] = useState(false);
-  const [isUniIdAvailabilityChecked, setIsUniIdAvailabilityChecked] = useState(false);
-  const uniIdService = useMemo(() => new UniIdService(uniIdConfig), [uniIdConfig]);
-  const [githubBindingStatus, setGithubBindingStatus] = useState<'bound' | 'unbound' | 'unknown'>('unknown');
   const [language, setLanguageState] = useState<Language>(() => {
     const saved = localStorage.getItem('zenblog_lang');
     return (saved as Language) || 'zh';
@@ -267,111 +249,26 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
 
-  const canManage = authState.isUniIdAuthed || authState.isWriterUnlocked;
-  const hasUniIdConfig = Boolean(uniIdConfig.url.trim() && uniIdConfig.appId.trim());
+  const canManage = authState.isWriterUnlocked;
 
+  // 从 localStorage 恢复写作解锁状态
   useEffect(() => {
     if (configLoading) return;
-    if (!hasUniIdConfig) {
-      setIsUniIdAvailable(false);
-      setIsUniIdAvailabilityChecked(true);
-      return;
+    const cachedWriter = localStorage.getItem('zenblog_writer_unlocked') === '1';
+    if (cachedWriter) {
+      setAuthState({ isWriterUnlocked: true });
     }
-
-    let cancelled = false;
-    setIsUniIdAvailable(false);
-    setIsUniIdAvailabilityChecked(false);
-    uniIdService
-      .init()
-      .then(() => {
-        if (!cancelled) {
-          setIsUniIdAvailable(true);
-          setIsUniIdAvailabilityChecked(true);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setIsUniIdAvailable(false);
-          setIsUniIdAvailabilityChecked(true);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [configLoading, hasUniIdConfig, uniIdService]);
-
-  useEffect(() => {
-    if (configLoading || !isUniIdAvailabilityChecked) return;
-
-    if (!isUniIdAvailable) {
-      const cachedWriter = localStorage.getItem('zenblog_writer_unlocked') === '1';
-      localStorage.removeItem('zenblog_uniid_token');
-      localStorage.removeItem('zenblog_uniid_user');
-      setGithubBindingStatus('unknown');
-      setAuthState((prev) => ({
-        ...prev,
-        isUniIdAuthed: false,
-        isWriterUnlocked: prev.isWriterUnlocked || cachedWriter,
-        uniIdToken: null,
-        uniIdUser: null,
-      }));
-      return;
-    }
-
-    const restore = async () => {
-      const cachedWriter = localStorage.getItem('zenblog_writer_unlocked') === '1';
-      if (cachedWriter) {
-        setAuthState((prev) => ({ ...prev, isWriterUnlocked: true }));
-      }
-
-      const uniIdReady = Boolean(uniIdConfig.url?.trim() && uniIdConfig.appId?.trim());
-      if (!uniIdReady) return;
-
-      const restored = await uniIdService.restoreSession();
-      if (!restored.valid || !restored.token) {
-        localStorage.removeItem('zenblog_uniid_token');
-        localStorage.removeItem('zenblog_uniid_user');
-        setGithubBindingStatus('unknown');
-        return;
-      }
-
-      let boundStatus: 'bound' | 'unbound' | 'unknown' = 'unknown';
-      const userId = restored.user?.id;
-      if (userId) {
-        try {
-          const bindingKey = await uniIdService.getGitHubBinding(userId);
-          boundStatus = bindingKey ? 'bound' : 'unbound';
-        } catch {
-          boundStatus = 'unknown';
-        }
-      }
-      setAuthState({
-        isUniIdAuthed: true,
-        isWriterUnlocked: cachedWriter,
-        uniIdToken: restored.token,
-        uniIdUser: restored.user,
-      });
-      setGithubBindingStatus(boundStatus);
-    };
-    restore();
-  }, [configLoading, isUniIdAvailabilityChecked, isUniIdAvailable, uniIdService, uniIdConfig.url, uniIdConfig.appId]);
+  }, [configLoading]);
 
   // 从 /config.json 读取配置（main 分支中的静态文件）
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        // 1. 先从 /config.json 读取公共配置（包括 uniid）
+        // 1. 从 /config.json 读取公共配置
         let publicConfig: PublicConfig | null = null;
         const response = await fetch('/config.json');
         if (response.ok) {
           publicConfig = await response.json();
-        }
-        if (publicConfig?.uniid?.url && publicConfig?.uniid?.appId) {
-          setUniIdConfig({
-            url: publicConfig.uniid.url,
-            appId: publicConfig.uniid.appId,
-          });
         }
 
         // 2. 优先使用 localStorage 中的 GitHub 配置（保留 token）
@@ -495,14 +392,6 @@ const App: React.FC = () => {
   const handleSaveConfig = async (newConfig: GitHubConfig) => {
     localStorage.setItem('zenblog_config', JSON.stringify(newConfig));
     setConfig(newConfig);
-    if (authState.isUniIdAuthed && authState.uniIdUser?.id && newConfig.token) {
-      try {
-        await uniIdService.upsertGitHubBinding(authState.uniIdUser.id, newConfig.token);
-        setGithubBindingStatus('bound');
-      } catch (err) {
-        console.warn('Failed to sync GitHub key to UniID:', err);
-      }
-    }
     toast.success(t.settings.syncLocal);
   };
 
@@ -537,14 +426,6 @@ const App: React.FC = () => {
     // 3. 更新本地状态和存储（仅保存 config，profile 需要 token）
     localStorage.setItem('zenblog_config', JSON.stringify(newConfig));
     setConfig(newConfig);
-    if (authState.isUniIdAuthed && authState.uniIdUser?.id && newConfig.token) {
-      try {
-        await uniIdService.upsertGitHubBinding(authState.uniIdUser.id, newConfig.token);
-        setGithubBindingStatus('bound');
-      } catch (err) {
-        console.warn('Failed to sync GitHub key to UniID:', err);
-      }
-    }
 
     // 4. 如果有 token 且有 profile 变更，更新 profile 并提交到云端
     if (newConfig.token && isProfileChanged) {
@@ -573,41 +454,6 @@ const App: React.FC = () => {
     }
   };
 
-  const loginByUniId = async (): Promise<boolean> => {
-    if (!isUniIdAvailable) return false;
-
-    const result = await uniIdService.login();
-    if (result.cancelled || !result.token || !result.user) return false;
-    let writerUnlocked = localStorage.getItem('zenblog_writer_unlocked') === '1';
-    let configToken = config?.token || '';
-    if (!configToken && result.user.id) {
-      try {
-        const bindingKey = await uniIdService.getGitHubBinding(result.user.id);
-        setGithubBindingStatus(bindingKey ? 'bound' : 'unbound');
-        if (bindingKey && config) {
-          configToken = bindingKey;
-          const merged = { ...config, token: bindingKey };
-          localStorage.setItem('zenblog_config', JSON.stringify(merged));
-          setConfig(merged);
-          writerUnlocked = true;
-          localStorage.setItem('zenblog_writer_unlocked', '1');
-        }
-      } catch (err) {
-        console.warn('Failed to load GitHub key binding:', err);
-        setGithubBindingStatus('unknown');
-      }
-    } else {
-      setGithubBindingStatus('unknown');
-    }
-    setAuthState({
-      isUniIdAuthed: true,
-      isWriterUnlocked: writerUnlocked,
-      uniIdToken: result.token,
-      uniIdUser: result.user,
-    });
-    return true;
-  };
-
   const loginByGithubKey = async (key: string): Promise<void> => {
     const res = await fetch('https://api.github.com/user', {
       headers: {
@@ -619,37 +465,17 @@ const App: React.FC = () => {
       throw new Error('GitHub Key 无效或权限不足');
     }
     localStorage.setItem('zenblog_writer_unlocked', '1');
-    setAuthState((prev) => ({ ...prev, isWriterUnlocked: true }));
+    setAuthState({ isWriterUnlocked: true });
     if (config) {
       const nextConfig = { ...config, token: key };
       localStorage.setItem('zenblog_config', JSON.stringify(nextConfig));
       setConfig(nextConfig);
     }
-    if (authState.isUniIdAuthed && authState.uniIdUser?.id) {
-      await uniIdService.upsertGitHubBinding(authState.uniIdUser.id, key);
-      setGithubBindingStatus('bound');
-    }
   };
 
   const logout = async (): Promise<void> => {
-    try {
-      if (authState.isUniIdAuthed) {
-        await uniIdService.logout();
-      }
-    } catch (err) {
-      console.warn('UniID logout failed:', err);
-    } finally {
-      localStorage.removeItem('zenblog_uniid_token');
-      localStorage.removeItem('zenblog_uniid_user');
-      localStorage.removeItem('zenblog_writer_unlocked');
-      setAuthState({
-        isUniIdAuthed: false,
-        isWriterUnlocked: false,
-        uniIdToken: null,
-        uniIdUser: null,
-      });
-      setGithubBindingStatus('unknown');
-    }
+    localStorage.removeItem('zenblog_writer_unlocked');
+    setAuthState({ isWriterUnlocked: false });
   };
 
   const fileToBase64 = (file: File): Promise<string> =>
@@ -758,7 +584,7 @@ const App: React.FC = () => {
   return (
     <ThemeContext.Provider value={{ theme, setTheme, effectiveTheme }}>
       <LanguageContext.Provider value={{ language, t, setLanguage }}>
-        <AuthContext.Provider value={{ authState, githubBindingStatus, isUniIdAvailable, loginByUniId, loginByGithubKey, logout }}>
+        <AuthContext.Provider value={{ authState, loginByGithubKey, logout }}>
           <Router>
             <AppContent
               canManage={canManage}
