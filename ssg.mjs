@@ -124,6 +124,7 @@ async function main() {
 </head>
 <body><p>Redirecting…</p></body>
 </html>`;
+  const notFoundDst = path.join(distDir, '404.html');
   await fs.writeFile(notFoundDst, fallbackHtml, 'utf-8');
   console.log('[ssg] generated 404.html (兜底)');
 
