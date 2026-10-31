@@ -202,17 +202,27 @@ const App: React.FC<AppProps> = ({ serverSnapshot = false }) => {
   const [authState, setAuthState] = useState<AuthState>({
     isWriterUnlocked: false,
   });
-  const [language, setLanguageState] = useState<Language>(() => {
-    const saved = safeStorage.get('zenblog_lang');
-    return (saved as Language) || 'zh';
-  });
+  // 语言/主题：首屏必须与 SSR 一致，因此初始值固定为默认，
+  // 待客户端挂载后再从 localStorage 同步，避免 hydration mismatch。
+  const [language, setLanguageState] = useState<Language>('zh');
 
-  const [theme, setThemeState] = useState<Theme>(() => {
-    const saved = safeStorage.get('zenblog_theme');
-    return (saved as Theme) || 'auto';
-  });
+  const [theme, setThemeState] = useState<Theme>('auto');
 
   const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light');
+
+  // 挂载后同步本地偏好（只在浏览器执行，不参与首次渲染）
+  useEffect(() => {
+    if (!isBrowser) return;
+    const savedLang = safeStorage.get('zenblog_lang') as Language | null;
+    if (savedLang && savedLang !== language) {
+      setLanguageState(savedLang);
+    }
+    const savedTheme = safeStorage.get('zenblog_theme') as Theme | null;
+    if (savedTheme && savedTheme !== theme) {
+      setThemeState(savedTheme);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const setLanguage = (lang: Language) => {
     safeStorage.set('zenblog_lang', lang);
@@ -287,8 +297,10 @@ const App: React.FC<AppProps> = ({ serverSnapshot = false }) => {
         }
       : null
   );
-  const [configLoading, setConfigLoading] = useState(!serverSnapshot);
-  const [loading, setLoading] = useState(!serverSnapshot);
+  // 初始渲染必须与服务端一致：有快照数据就直接展示，避免水合失配。
+  const hasSnapshotData = Boolean(snapshotJson.config?.owner && snapshotJson.config?.repo);
+  const [configLoading, setConfigLoading] = useState(!hasSnapshotData);
+  const [loading, setLoading] = useState(!hasSnapshotData);
   const [initError, setInitError] = useState<string | null>(null);
 
   const canManage = authState.isWriterUnlocked;
