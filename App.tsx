@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
-import { Link, Navigate, Route, HashRouter as Router, Routes, useLocation } from 'react-router-dom';
+import { Link, Navigate, Route, BrowserRouter, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import About from './pages/About';
 import Editor from './pages/Editor';
@@ -12,6 +12,25 @@ import Settings from './pages/Settings';
 import { GitHubService } from './services/githubService';
 import { Language, translations } from './services/i18n';
 import { AuthState, FileChange, GitHubConfig, Post, Profile, PublicConfig } from './types';
+import { safeStorage, isBrowser } from './utils/env';
+
+/**
+ * 构建期数据快照（由 `npm run snapshot` 生成，不入库）。
+ * 用 import.meta.glob 做可选导入：文件不存在时不会构建失败。
+ */
+const snapshotModules = import.meta.glob('./src/generated/snapshot.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, unknown>;
+
+type SnapshotShape = {
+  config?: { owner: string; repo: string; branch: string };
+  posts?: Post[];
+  profile?: Profile | null;
+};
+
+const snapshotJson: SnapshotShape =
+  (Object.values(snapshotModules)[0] as SnapshotShape) || {};
 
 export type Theme = 'light' | 'dark' | 'auto';
 
@@ -174,34 +193,40 @@ const AppContent: React.FC<{
     );
   };
 
-const App: React.FC = () => {
+interface AppProps {
+  /** SSG 构建时为 true：跳过网络请求与浏览器 API，只用快照渲染 */
+  serverSnapshot?: boolean;
+}
+
+const App: React.FC<AppProps> = ({ serverSnapshot = false }) => {
   const [authState, setAuthState] = useState<AuthState>({
     isWriterUnlocked: false,
   });
   const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem('zenblog_lang');
+    const saved = safeStorage.get('zenblog_lang');
     return (saved as Language) || 'zh';
   });
 
   const [theme, setThemeState] = useState<Theme>(() => {
-    const saved = localStorage.getItem('zenblog_theme');
+    const saved = safeStorage.get('zenblog_theme');
     return (saved as Theme) || 'auto';
   });
 
   const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light');
 
   const setLanguage = (lang: Language) => {
-    localStorage.setItem('zenblog_lang', lang);
+    safeStorage.set('zenblog_lang', lang);
     setLanguageState(lang);
   };
 
   const setTheme = (newTheme: Theme) => {
-    localStorage.setItem('zenblog_theme', newTheme);
+    safeStorage.set('zenblog_theme', newTheme);
     setThemeState(newTheme);
   };
 
   // 监听系统主题变化和主题设置
   useEffect(() => {
+    if (!isBrowser) return;
     const updateTheme = () => {
       let isDark = false;
 
@@ -236,32 +261,50 @@ const App: React.FC = () => {
 
   const t = translations[language];
 
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [profile, setProfile] = useState<Profile>({
-    name: "ZenBlog",
-    bio: "已就绪，欢迎使用！",
-    avatar: "/logo.png",
-    socials: {}
-  });
+  const snapshot = snapshotJson as {
+    config: { owner: string; repo: string; branch: string };
+    posts: Post[];
+    profile: Profile | null;
+  };
 
-  const [config, setConfig] = useState<GitHubConfig | null>(null);
-  const [configLoading, setConfigLoading] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState<Post[]>(snapshot.posts || []);
+  const [profile, setProfile] = useState<Profile>(
+    snapshot.profile || {
+      name: 'ZenBlog',
+      bio: '已就绪，欢迎使用！',
+      avatar: '/logo.png',
+      socials: {},
+    }
+  );
+
+  const [config, setConfig] = useState<GitHubConfig | null>(
+    snapshot.config?.owner && snapshot.config?.repo
+      ? {
+          token: '',
+          owner: snapshot.config.owner,
+          repo: snapshot.config.repo,
+          branch: snapshot.config.branch || 'data',
+        }
+      : null
+  );
+  const [configLoading, setConfigLoading] = useState(!serverSnapshot);
+  const [loading, setLoading] = useState(!serverSnapshot);
   const [initError, setInitError] = useState<string | null>(null);
 
   const canManage = authState.isWriterUnlocked;
 
   // 从 localStorage 恢复写作解锁状态
   useEffect(() => {
-    if (configLoading) return;
-    const cachedWriter = localStorage.getItem('zenblog_writer_unlocked') === '1';
+    if (serverSnapshot || configLoading) return;
+    const cachedWriter = safeStorage.get('zenblog_writer_unlocked') === '1';
     if (cachedWriter) {
       setAuthState({ isWriterUnlocked: true });
     }
-  }, [configLoading]);
+  }, [configLoading, serverSnapshot]);
 
   // 从 /config.json 读取配置（main 分支中的静态文件）
   useEffect(() => {
+    if (serverSnapshot) return;
     const loadConfig = async () => {
       try {
         // 1. 从 /config.json 读取公共配置
@@ -272,7 +315,7 @@ const App: React.FC = () => {
         }
 
         // 2. 优先使用 localStorage 中的 GitHub 配置（保留 token）
-        const saved = localStorage.getItem('zenblog_config');
+        const saved = safeStorage.get('zenblog_config');
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed.owner && parsed.repo) {
@@ -303,10 +346,11 @@ const App: React.FC = () => {
     };
 
     loadConfig();
-  }, []);
+  }, [serverSnapshot]);
 
   // 动态更新页面标题、favicon 和 meta description
   useEffect(() => {
+    if (!isBrowser) return;
     // 更新页面标题
     const siteName = profile.siteSettings?.siteName || profile.name || 'ZenBlog';
     document.title = siteName;
@@ -342,6 +386,9 @@ const App: React.FC = () => {
   }, [profile.siteSettings, profile.name, profile.avatar, profile.bio]);
 
   useEffect(() => {
+    // SSG 构建阶段不发起网络请求，直接用快照
+    if (serverSnapshot) return;
+
     const hideLoader = () => {
       const loader = document.getElementById('initial-loader');
       if (loader) {
@@ -390,7 +437,7 @@ const App: React.FC = () => {
   }, [config?.owner, config?.repo, configLoading]);
 
   const handleSaveConfig = async (newConfig: GitHubConfig) => {
-    localStorage.setItem('zenblog_config', JSON.stringify(newConfig));
+    safeStorage.set('zenblog_config', JSON.stringify(newConfig));
     setConfig(newConfig);
     toast.success(t.settings.syncLocal);
   };
@@ -424,7 +471,7 @@ const App: React.FC = () => {
     }
 
     // 3. 更新本地状态和存储（仅保存 config，profile 需要 token）
-    localStorage.setItem('zenblog_config', JSON.stringify(newConfig));
+    safeStorage.set('zenblog_config', JSON.stringify(newConfig));
     setConfig(newConfig);
 
     // 4. 如果有 token 且有 profile 变更，更新 profile 并提交到云端
@@ -464,17 +511,17 @@ const App: React.FC = () => {
     if (!res.ok) {
       throw new Error('GitHub Key 无效或权限不足');
     }
-    localStorage.setItem('zenblog_writer_unlocked', '1');
+    safeStorage.set('zenblog_writer_unlocked', '1');
     setAuthState({ isWriterUnlocked: true });
     if (config) {
       const nextConfig = { ...config, token: key };
-      localStorage.setItem('zenblog_config', JSON.stringify(nextConfig));
+      safeStorage.set('zenblog_config', JSON.stringify(nextConfig));
       setConfig(nextConfig);
     }
   };
 
   const logout = async (): Promise<void> => {
-    localStorage.removeItem('zenblog_writer_unlocked');
+    safeStorage.remove('zenblog_writer_unlocked');
     setAuthState({ isWriterUnlocked: false });
   };
 
@@ -581,28 +628,30 @@ const App: React.FC = () => {
     }
   };
 
+  const content = (
+    <AppContent
+      canManage={canManage}
+      authState={authState}
+      logout={logout}
+      posts={posts}
+      profile={profile}
+      config={config}
+      configLoading={configLoading}
+      loading={loading}
+      initError={initError}
+      handleSaveConfig={handleSaveConfig}
+      handleSaveProfile={handleSaveProfile}
+      handleSaveConfigAndProfile={handleSaveConfigAndProfile}
+      handleSavePost={handleSavePost}
+      handleDeletePost={handleDeletePost}
+    />
+  );
+
   return (
     <ThemeContext.Provider value={{ theme, setTheme, effectiveTheme }}>
       <LanguageContext.Provider value={{ language, t, setLanguage }}>
         <AuthContext.Provider value={{ authState, loginByGithubKey, logout }}>
-          <Router>
-            <AppContent
-              canManage={canManage}
-              authState={authState}
-              logout={logout}
-              posts={posts}
-              profile={profile}
-              config={config}
-              configLoading={configLoading}
-              loading={loading}
-              initError={initError}
-              handleSaveConfig={handleSaveConfig}
-              handleSaveProfile={handleSaveProfile}
-              handleSaveConfigAndProfile={handleSaveConfigAndProfile}
-              handleSavePost={handleSavePost}
-              handleDeletePost={handleDeletePost}
-            />
-          </Router>
+          {serverSnapshot ? content : <BrowserRouter>{content}</BrowserRouter>}
         </AuthContext.Provider>
       </LanguageContext.Provider>
     </ThemeContext.Provider>

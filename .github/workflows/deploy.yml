@@ -21,20 +21,36 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # 移除 cache: 'npm'，因为仓库中缺少 package-lock.json 会导致报错
 
       - name: Install dependencies
         run: npm install
 
-      - name: Build project
+      # SSG 预渲染需要构建期的数据快照。
+      # GITHUB_TOKEN 由 Actions 自动提供，用于读取 public/config.json 指向的 data 分支。
+      - name: Fetch content snapshot
+        run: npm run snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # npm run build 会依次执行：snapshot → 客户端构建 → SSR 构建 → 预渲染
+      - name: Build project (SSG)
         run: npm run build
         env:
           API_KEY: ${{ secrets.API_KEY }}
+
+      # 构建产物检查：确保预渲染真的生成了页面
+      - name: Verify prerendered output
+        run: |
+          echo "生成的 HTML："
+          find dist -name "index.html" | sort
+          test -f dist/index.html || (echo "缺少 dist/index.html" && exit 1)
+          test -f dist/404.html || (echo "缺少 404.html（SPA 回退）" && exit 1)
+          echo "预渲染检查通过"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

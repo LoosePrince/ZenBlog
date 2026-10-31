@@ -5,8 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "snapshot": "node scripts/fetch-snapshot.mjs",
+    "build:client": "npm run snapshot && vite build",
+    "build:ssr": "vite build --ssr entry-ssg.tsx --outDir dist-ssr",
+    "build:ssg": "npm run snapshot && vite build && vite build --ssr entry-ssg.tsx --outDir dist-ssr && node ssg.mjs",
+    "build": "npm run build:ssg",
+    "postbuild": "node -e \"require('fs').rmSync('dist-ssr',{recursive:true,force:true})\"",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -21,6 +27,7 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@types/node": "^26.6.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",

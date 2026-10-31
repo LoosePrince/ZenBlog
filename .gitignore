@@ -25,3 +25,5 @@ dist-ssr
 
 # AI IDE
 GEMINI.md
+# SSG 构建期数据快照（由 npm run snapshot 生成）
+src/generated/snapshot.json
