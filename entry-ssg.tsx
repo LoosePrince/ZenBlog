@@ -5,6 +5,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { StaticRouter } from 'react-router';
 import App from './App';
+import './src/index.css';
 
 export const PRERENDER_PATHS = ['/', '/about', '/login'];
 

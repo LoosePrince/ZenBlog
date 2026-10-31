@@ -1,10 +1,11 @@
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  // Tailwind 在构建期编译成静态 CSS，不再依赖 CDN 运行时生成。
+  plugins: [react(), tailwindcss()],
   // 使用绝对根路径：SSG 会为 /about/ 等子目录生成 index.html，
   // 相对路径 './assets/' 在子目录下会被解析成 /about/assets/ 而 404。
   base: '/',
@@ -15,5 +16,5 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-  }
+  },
 });

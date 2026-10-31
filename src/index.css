@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/*
+ * Tailwind v4 默认只扫描项目源码，这里显式声明内容来源，
+ * 确保 SSG 预渲染用到的 class 都被编译进静态 CSS。
+ */
+@source "./index.html";
+@source "./index.tsx";
+@source "./App.tsx";
+@source "./pages/**/*.tsx";
+@source "./components/**/*.tsx";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* 站点基础样式（原 index.html 内联样式迁移至此） */
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  background-color: #f9fafb;
+  margin: 0;
+}
+
+/* 首屏加载动画（SSG 完成后会被预渲染内容替换） */
+#initial-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f9fafb;
+  z-index: 9999;
+  transition: opacity 0.5s ease;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
