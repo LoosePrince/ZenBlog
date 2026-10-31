@@ -25,10 +25,17 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const { effectiveTheme } = useTheme();
-  const [content, setContent] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+
+  // 用快照正文做初始值，保证服务端与客户端首屏一致（不会出现「正在加载文章」）
+  const initialPost = posts.find((p) => p.id === id);
+  const initialContent = typeof initialPost?.content === 'string' ? initialPost.content : '';
+
+  const [content, setContent] = useState<string>(initialContent);
+  const [loading, setLoading] = useState(!initialContent);
   const [error, setError] = useState<string | null>(null);
-  const [author, setAuthor] = useState<{ name: string; avatar: string; username: string } | null>(null);
+  const [author, setAuthor] = useState<{ name: string; avatar: string; username: string } | null>(
+    initialPost?.author ?? null
+  );
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
   const [fileTxtPreviews, setFileTxtPreviews] = useState<Record<string, string>>({});
@@ -44,8 +51,19 @@ const PostDetail: React.FC<PostDetailProps> = ({ posts, config, profile, isAdmin
       return;
     }
 
+    // SSG 预渲染产物里带着正文，首屏直接展示，避免「正在加载」闪烁
+    if (typeof post.content === 'string' && post.content) {
+      setContent(post.content);
+      if (post.author) setAuthor(post.author);
+      setLoading(false);
+    }
+
     const fetchContent = async () => {
-      setLoading(true);
+      // 已有快照正文时不再显示加载态，静默刷新即可
+      const hasSnapshot = typeof post.content === 'string' && post.content.length > 0;
+      if (!hasSnapshot) {
+        setLoading(true);
+      }
       setError(null);
       const service = new GitHubService(config);
       try {

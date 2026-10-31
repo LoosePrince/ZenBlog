@@ -38,7 +38,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, isAdmin }) => {
         )}
       </div>
       
-      <Link to={`/post/${post.id}`} className="flex-grow">
+      <Link to={`/post/${post.id}/`} className="flex-grow">
         <h3 className="text-2xl font-extrabold text-gray-900 dark:text-gray-100 mb-4 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-tight">
           {post.title}
         </h3>
@@ -53,7 +53,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, isAdmin }) => {
           {formatDate(post.date, 'full', language)}
         </div>
         <Link 
-          to={`/post/${post.id}`} 
+          to={`/post/${post.id}/`} 
           className="flex items-center space-x-1 text-indigo-600 dark:text-indigo-400 text-sm font-black group/link"
         >
           <span className="relative">

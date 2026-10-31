@@ -13,6 +13,8 @@ export interface Post {
   contentPath: string;
   image?: string;
   reference?: PostReference;
+  /** 构建期快照注入的正文（仅 SSG 产物中存在，运行时用于首屏渲染） */
+  content?: string;
   author?: {
     name: string;
     avatar: string;

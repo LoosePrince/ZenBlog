@@ -103,10 +103,29 @@ async function main() {
   }
 
   // GitHub Pages：拷贝 404.html 作为 SPA 回退，避免深链接 404
-  const notFoundSrc = path.join(distDir, 'index.html');
-  const notFoundDst = path.join(distDir, '404.html');
-  await fs.copyFile(notFoundSrc, notFoundDst);
-  console.log('[ssg] generated 404.html (SPA fallback)');
+  // GitHub Pages：404.html 作为深链接兜底。
+  // 注意 GitHub Pages 会自动为目录补尾斜杠（/about → /about/），
+  // 所以正常路径都会命中预渲染文件，这里只需一个简洁跳转页。
+  const fallbackHtml = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZenBlog</title>
+<script>
+(function () {
+  var p = location.pathname;
+  // 目录型路径补斜杠，其余交给根路径由前端路由处理
+  if (!/\\.[a-zA-Z0-9]+$/.test(p)) {
+    location.replace('/');
+  }
+})();
+</script>
+</head>
+<body><p>Redirecting…</p></body>
+</html>`;
+  await fs.writeFile(notFoundDst, fallbackHtml, 'utf-8');
+  console.log('[ssg] generated 404.html (兜底)');
 
   console.log(`[ssg] 完成预渲染路由 ${generated} 条:`, ROUTES.join(', '));
 }

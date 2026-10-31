@@ -65,6 +65,51 @@ async function fetchJsonFile(owner, repo, branch, filePath, { retries = 3 } = {}
   throw lastErr || new Error('unknown error');
 }
 
+/**
+ * 抓取原始文本文件（文章正文 .md）。
+ * 优先走 contents API；文件较大时自动回退 raw 地址。
+ */
+async function fetchRawText(owner, repo, branch, filePath, { retries = 3 } = {}) {
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'zenblog-ssg',
+  };
+  if (TOKEN) headers.Authorization = `Bearer ${TOKEN}`;
+
+  let lastErr;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(apiUrl(owner, repo, branch, filePath), { headers });
+      if (res.status === 404) return '';
+      if (!res.ok) {
+        const retryable = res.status === 403 || res.status === 429 || res.status >= 500;
+        if (retryable && attempt < retries) {
+          await new Promise((r) => setTimeout(r, attempt * 2000));
+          lastErr = new Error(`GitHub ${res.status}`);
+          continue;
+        }
+        throw new Error(`GitHub ${res.status} for ${filePath}`);
+      }
+      const body = await res.json();
+      if (body?.content) {
+        return Buffer.from(
+          body.content,
+          body.encoding === 'base64' ? 'base64' : 'utf-8'
+        ).toString('utf-8');
+      }
+      // 大文件无 content 字段，回退 raw
+      const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
+      const rawRes = await fetch(rawUrl, { headers: { 'User-Agent': 'zenblog-ssg' } });
+      if (!rawRes.ok) throw new Error(`raw ${rawRes.status}`);
+      return await rawRes.text();
+    } catch (err) {
+      lastErr = err;
+      if (attempt >= retries) throw err;
+    }
+  }
+  throw lastErr || new Error('unknown error');
+}
+
 async function main() {
   const STRICT = process.argv.includes('--strict');
 
@@ -108,6 +153,26 @@ async function main() {
     }
   } else {
     console.warn('[snapshot] config.json 缺少 owner/repo，跳过抓取');
+  }
+
+  // 逐篇抓取正文，用于文章详情页预渲染。
+  // 顺序执行并限制并发，避免触发 GitHub 速率限制。
+  if (Array.isArray(posts) && posts.length) {
+    let ok = 0;
+    for (const post of posts) {
+      const contentPath = typeof post?.contentPath === 'string' ? post.contentPath : '';
+      if (!contentPath) continue;
+      try {
+        const content = await fetchRawText(owner, repo, branch, contentPath);
+        if (typeof content === 'string') {
+          post.content = content;
+          ok += 1;
+        }
+      } catch (err) {
+        console.warn(`[snapshot] 正文抓取失败 ${contentPath}：${err.message}`);
+      }
+    }
+    console.log(`[snapshot] 正文 ${ok}/${posts.length} 篇`);
   }
 
   const snapshot = {
