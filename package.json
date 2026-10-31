@@ -8,11 +8,12 @@
     "snapshot": "node scripts/fetch-snapshot.mjs",
     "build:client": "npm run snapshot && vite build",
     "build:ssr": "vite build --ssr entry-ssg.tsx --outDir dist-ssr",
-    "build:ssg": "npm run snapshot && vite build && vite build --ssr entry-ssg.tsx --outDir dist-ssr && node ssg.mjs",
+    "build:ssg": "vite build && vite build --ssr entry-ssg.tsx --outDir dist-ssr && node ssg.mjs",
     "build": "npm run build:ssg",
     "postbuild": "node -e \"require('fs').rmSync('dist-ssr',{recursive:true,force:true})\"",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "build:all": "npm run snapshot && npm run build:ssg"
   },
   "dependencies": {
     "clsx": "^2.1.1",

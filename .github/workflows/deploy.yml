@@ -31,13 +31,14 @@ jobs:
         run: npm install
 
       # SSG 预渲染需要构建期的数据快照。
-      # GITHUB_TOKEN 由 Actions 自动提供，用于读取 public/config.json 指向的 data 分支。
+      # GITHUB_TOKEN 由 Actions 自动提供，避免匿名速率限制（60 次/小时）。
+      # --strict：抓取失败直接让构建失败，避免部署一个空内容站点。
       - name: Fetch content snapshot
-        run: npm run snapshot
+        run: npm run snapshot -- --strict
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # npm run build 会依次执行：snapshot → 客户端构建 → SSR 构建 → 预渲染
+      # npm run build 会依次执行：客户端构建 → SSR 构建 → 预渲染
       - name: Build project (SSG)
         run: npm run build
         env:

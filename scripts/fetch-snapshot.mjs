@@ -26,25 +26,48 @@ function apiUrl(owner, repo, branch, filePath) {
   return `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}?ref=${branch}`;
 }
 
-async function fetchJsonFile(owner, repo, branch, filePath) {
+async function fetchJsonFile(owner, repo, branch, filePath, { retries = 3 } = {}) {
   const headers = {
     Accept: 'application/vnd.github+json',
     'User-Agent': 'zenblog-ssg',
   };
-  // 公开仓库不需要 token；私有仓库才需要。
+  // 公开仓库不需要 token；私有仓库或为避免速率限制时需要。
   if (TOKEN) headers.Authorization = `Bearer ${TOKEN}`;
 
-  const res = await fetch(apiUrl(owner, repo, branch, filePath), { headers });
-  if (!res.ok) {
-    if (res.status === 404) return null;
-    throw new Error(`GitHub ${res.status} for ${filePath}: ${await res.text()}`);
+  let lastErr;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(apiUrl(owner, repo, branch, filePath), { headers });
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const body = await res.text();
+        const retryable = res.status === 403 || res.status === 429 || res.status >= 500;
+        if (retryable && attempt < retries) {
+          const wait = attempt * 2000;
+          console.warn(`[snapshot] ${filePath} 返回 ${res.status}，${wait}ms 后重试(${attempt}/${retries})`);
+          await new Promise((r) => setTimeout(r, wait));
+          lastErr = new Error(`GitHub ${res.status}: ${body.slice(0, 200)}`);
+          continue;
+        }
+        throw new Error(`GitHub ${res.status} for ${filePath}: ${body.slice(0, 200)}`);
+      }
+      const body = await res.json();
+      const content = Buffer.from(
+        body.content || '',
+        body.encoding === 'base64' ? 'base64' : 'utf-8'
+      ).toString('utf-8');
+      return JSON.parse(content);
+    } catch (err) {
+      lastErr = err;
+      if (attempt >= retries) throw err;
+    }
   }
-  const body = await res.json();
-  const content = Buffer.from(body.content || '', body.encoding === 'base64' ? 'base64' : 'utf-8').toString('utf-8');
-  return JSON.parse(content);
+  throw lastErr || new Error('unknown error');
 }
 
 async function main() {
+  const STRICT = process.argv.includes('--strict');
+
   let config;
   try {
     config = await readPublicConfig();
@@ -59,15 +82,29 @@ async function main() {
 
   let posts = [];
   let profile = null;
+  let fetchFailed = false;
 
   if (owner && repo) {
     console.log(`[snapshot] 抓取 ${owner}/${repo}@${branch}`);
+    if (!TOKEN) {
+      console.warn('[snapshot] 未提供 GITHUB_TOKEN，将受匿名速率限制（60 次/小时）');
+    }
     try {
-      posts = (await fetchJsonFile(owner, repo, branch, 'data/posts.json')) || [];
-      profile = await fetchJsonFile(owner, repo, branch, 'data/profile.json');
+      const [fetchedPosts, fetchedProfile] = await Promise.all([
+        fetchJsonFile(owner, repo, branch, 'data/posts.json'),
+        fetchJsonFile(owner, repo, branch, 'data/profile.json'),
+      ]);
+      posts = fetchedPosts || [];
+      profile = fetchedProfile;
       console.log(`[snapshot] 文章 ${posts.length} 篇`);
     } catch (err) {
-      console.warn(`[snapshot] 抓取失败，将使用空数据：${err.message}`);
+      fetchFailed = true;
+      console.warn(`[snapshot] 抓取失败：${err.message}`);
+      if (STRICT) {
+        console.error('[snapshot] --strict 模式：抓取失败即中止构建，避免部署空内容站点');
+        process.exit(1);
+      }
+      console.warn('[snapshot] 继续构建，但内容可能为空');
     }
   } else {
     console.warn('[snapshot] config.json 缺少 owner/repo，跳过抓取');
@@ -75,6 +112,7 @@ async function main() {
 
   const snapshot = {
     generatedAt: new Date().toISOString(),
+    fetchFailed,
     config: { owner, repo, branch },
     posts: Array.isArray(posts) ? posts : [],
     profile,
