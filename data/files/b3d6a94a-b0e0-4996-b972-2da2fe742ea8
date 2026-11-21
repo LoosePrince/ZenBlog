@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+"""Extract a partition from OPPO VAB payload.bin over HTTP Range.
+
+Uses the official update_metadata.proto schema (DeltaArchiveManifest) so the
+manifest is parsed exactly, not by guessing field numbers.
+
+payload.bin layout:
+  "CrAU" (4) | version u64 (8) | manifest_size u64 (8) | manifest |
+  metadata signature | data blobs
+Blob offsets inside the manifest are relative to payload data start.
+"""
+import importlib.util
+import bz2
+import json
+import lzma
+import struct
+import sys
+
+import requests
+
+sys.path.insert(0, r"D:\root\oplus")
+import remote_zip as rz
+import ota_query as q
+
+PAYLOAD_DATA_OFFSET = 2993  # payload.bin data start inside the OTA zip
+
+
+def load_proto():
+    spec = importlib.util.spec_from_file_location(
+        "um", r"D:\root\oplus\update_metadata_pb2.py")
+    um = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(um)
+    return um
+
+
+def fetch(url, start, length, timeout=180):
+    end = start + length - 1
+    r = requests.get(url, headers={"Range": f"bytes={start}-{end}"}, timeout=timeout)
+    if r.status_code not in (200, 206):
+        raise IOError(f"{r.status_code} for {start}-{end}")
+    return r.content
+
+
+def open_payload(ota_version="OPD2407_11.C.21_1210_202606232316"):
+    um = load_proto()
+    url, size, comp = rz.resolve(ota_version)
+    head = fetch(url, PAYLOAD_DATA_OFFSET, 8 * 1024 * 1024)
+    assert head[:4] == b"CrAU", head[:4]
+    version = struct.unpack(">Q", head[4:12])[0]
+    msize = struct.unpack(">Q", head[12:20])[0]
+    best = None
+    for off in (24, 20 + 267, 20):
+        try:
+            m = um.DeltaArchiveManifest()
+            m.ParseFromString(head[off:off + msize])
+            if m.partitions:
+                best = (off, m)
+                break
+        except Exception:
+            continue
+    if not best:
+        raise RuntimeError("cannot parse manifest")
+    off, m = best
+    # header = magic(4) + version(8) + manifest_size(8) [+ metadata_sig_size(4) in v2]
+    # then manifest, then metadata signature block, then the data blobs.
+    sigsize = struct.unpack(">I", head[20:24])[0] if version == 2 else 0
+    data_start = PAYLOAD_DATA_OFFSET + off + msize + sigsize
+    return url, size, version, m, data_start
+
+
+def extract(partition, out_path=None, ota_version="OPD2407_11.C.21_1210_202606232316"):
+    url, size, version, m, data_start = open_payload(ota_version)
+    names = [p.partition_name for p in m.partitions]
+    target = next((p for p in m.partitions if p.partition_name == partition), None)
+    if target is None:
+        print("available:", names)
+        raise KeyError(partition)
+
+    info = target.new_partition_info
+    print(f"[{partition}] size={info.size} ops={len(target.operations)}")
+    out = out_path or rf"D:\root\bootdump\{partition}.img"
+
+    # Official InstallOperation.Type enum:
+    # 0 REPLACE, 1 REPLACE_BZ, 6 ZERO, 8 REPLACE_XZ
+    BLOCK = 4096
+    total = 0
+    with open(out, "wb") as f:
+        for op in target.operations:
+            otype = op.type
+            if otype == 6:  # ZERO
+                zeros = sum(e.num_blocks for e in op.dst_extents) * BLOCK
+                f.write(b"\x00" * zeros)
+                total += zeros
+                continue
+            if op.data_length == 0:
+                continue
+            blob = fetch(url, data_start + op.data_offset, op.data_length)
+            if otype == 0:
+                data = blob
+            elif otype == 1:
+                data = bz2.decompress(blob)
+            elif otype == 8:
+                data = lzma.decompress(blob, format=lzma.FORMAT_XZ)
+            else:
+                raise RuntimeError(f"unsupported op type={otype}")
+            f.write(data)
+            total += len(data)
+    print(f"wrote {out} ({total} bytes)")
+    return out
+
+
+if __name__ == "__main__":
+    part = sys.argv[1] if len(sys.argv) > 1 else "init_boot"
+    if part == "--list":
+        url, size, version, m, ds = open_payload()
+        for p in m.partitions:
+            print(f"{p.partition_name:26s} {p.new_partition_info.size}")
+    else:
+        extract(part)

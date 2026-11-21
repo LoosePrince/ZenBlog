@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""Remote ZIP reader over HTTP Range for OPPO OTA package.
+
+The OTA zip is ~7.7 GB but stores payload.bin as a single entry. We only need
+the zip central directory plus payload.bin's header (FVBM / protobuf manifest)
+and the init_boot data blob, so we read those bytes remotely.
+"""
+import io
+import json
+import struct
+import sys
+import zipfile
+
+import requests
+
+sys.path.insert(0, r"D:\root\oplus")
+import ota_query as q
+
+HDR = {"userId": "oplus-ota|00000001", "Range": "bytes=0-"}
+
+
+def resolve(ota_version="OPD2407_11.C.21_1210_202606232316"):
+    r = q.query(ota_version, "OPD2407")
+    comps = (r.get("body") or {}).get("components") or []
+    for c in comps:
+        if c.get("componentName") == "my_manifest":
+            pk = c["componentPackets"]
+            u = pk["manualUrl"]
+            rr = requests.get(u, headers=HDR, timeout=40, allow_redirects=False)
+            if rr.status_code != 302:
+                raise RuntimeError(f"resolve failed {rr.status_code}: {rr.text[:200]}")
+            return rr.headers["Location"], int(pk["size"]), c
+    raise RuntimeError("my_manifest not found")
+
+
+class RemoteFile(io.RawIOBase):
+    """Minimal seekable read-only file backed by HTTP Range requests."""
+
+    def __init__(self, url, size, session=None):
+        super().__init__()
+        self.url = url
+        self.size = size
+        self.s = session or requests.Session()
+        self.pos = 0
+        self._cache = b""
+        self._cache_start = 0
+
+    def seekable(self):
+        return True
+
+    def readable(self):
+        return True
+
+    def seek(self, offset, whence=io.SEEK_SET):
+        if whence == io.SEEK_SET:
+            self.pos = offset
+        elif whence == io.SEEK_CUR:
+            self.pos += offset
+        elif whence == io.SEEK_END:
+            self.pos = self.size + offset
+        return self.pos
+
+    def tell(self):
+        return self.pos
+
+    def _fetch(self, start, length):
+        end = min(start + length, self.size) - 1
+        if end < start:
+            return b""
+        r = self.s.get(self.url, headers={"Range": f"bytes={start}-{end}"},
+                       timeout=120)
+        if r.status_code not in (200, 206):
+            raise IOError(f"range fetch {start}-{end} -> {r.status_code}")
+        return r.content
+
+    def read(self, n=-1):
+        if n is None or n < 0:
+            n = self.size - self.pos
+        if n == 0 or self.pos >= self.size:
+            return b""
+        data = self._fetch(self.pos, n)
+        self.pos += len(data)
+        return data
+
+    def readinto(self, b):
+        data = self.read(len(b))
+        b[:len(data)] = data
+        return len(data)
+
+
+if __name__ == "__main__":
+    url, size, comp = resolve()
+    print("url:", url[:110], "...")
+    print("size:", size)
+    rf = RemoteFile(url, size)
+    zf = zipfile.ZipFile(rf)
+    infos = zf.infolist()
+    print(f"entries: {len(infos)}")
+    for i in infos:
+        print(f"{i.filename:28s} offset={i.header_offset:12d} comp={i.compress_size:12d} "
+              f"orig={i.file_size:12d} method={i.compress_type}")

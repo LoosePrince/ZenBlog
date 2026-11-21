@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""Query OPPO/OnePlus/realme OTA (allawnos / allawntech) for a full package URL.
+
+Protocol reverse-engineered from toraidl/OplusUpdater (Go).
+"""
+import base64, json, os, sys, time, random
+
+import requests
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+PUBKEY_CN = """-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApXYGXQpNL7gmMzzvajHa
+oZIHQQvBc2cOEhJc7/tsaO4sT0unoQnwQKfNQCuv7qC1Nu32eCLuewe9LSYhDXr9
+KSBWjOcCFXVXteLO9WCaAh5hwnUoP/5/Wz0jJwBA+yqs3AaGLA9wJ0+B2lB1vLE4
+FZNE7exUfwUc03fJxHG9nCLKjIZlrnAAHjRCd8mpnADwfkCEIPIGhnwq7pdkbamZ
+coZfZud1+fPsELviB9u447C6bKnTU4AaMcR9Y2/uI6TJUTcgyCp+ilgU0JxemrSI
+PFk3jbCbzamQ6Shkw/jDRzYoXpBRg/2QDkbq+j3ljInu0RHDfOeXf3VBfHSnQ66H
+CwIDAQAB
+-----END PUBLIC KEY-----"""
+
+
+def aes_ctr(data: bytes, key: bytes, iv: bytes) -> bytes:
+    c = Cipher(algorithms.AES(key), modes.CTR(iv))
+    e = c.encryptor()
+    return e.update(data) + e.finalize()
+
+
+def protected_key(key: bytes) -> str:
+    pub = serialization.load_pem_public_key(PUBKEY_CN.encode())
+    ct = pub.encrypt(
+        base64.b64encode(key),
+        padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                     algorithm=hashes.SHA1(), label=None))
+    return base64.b64encode(ct).decode()
+
+
+def query(ota_version: str, model: str, host: str = "component-ota-cn.allawntech.com",
+          carrier: str = "10010111", lang: str = "zh-CN",
+          pkver: str = "1615879139745", guid: str = None,
+          mode: str = "manual", timeout: int = 45):
+    guid = guid or ("0" * 64)
+    iv = os.urandom(16)
+    key = os.urandom(32)
+
+    payload = json.dumps({
+        "mode": "0", "time": int(time.time() * 1000), "isRooted": "0",
+        "isLocked": True, "type": "0", "deviceId": guid,
+        "opex": {"check": True},
+    }, separators=(",", ":")).encode()
+    cipher = base64.b64encode(aes_ctr(payload, key, iv)).decode()
+    body = json.dumps({"cipher": cipher, "iv": base64.b64encode(iv).decode()})
+
+    headers = {
+        "language": lang, "androidVersion": "unknown", "colorOSVersion": "unknown",
+        "romVersion": "unknown", "otaVersion": ota_version, "model": model,
+        "mode": mode, "nvCarrier": carrier, "infVersion": "1", "version": "2",
+        "deviceId": guid, "Content-Type": "application/json; charset=utf-8",
+        "protectedKey": json.dumps({"SCENE_1": {
+            "protectedKey": protected_key(key),
+            "version": str(time.time_ns() + 86400 * 10**9),
+            "negotiationVersion": pkver,
+        }}),
+    }
+    r = requests.post(f"https://{host}/update/v5", headers=headers,
+                      data=json.dumps({"params": body}), timeout=timeout)
+    j = r.json()
+    out = {"responseCode": j.get("responseCode"), "errMsg": j.get("errMsg")}
+    inner = j.get("body")
+    if isinstance(inner, str):
+        try:
+            m = json.loads(inner)
+            dec = aes_ctr(base64.b64decode(m["cipher"]),
+                          key, base64.b64decode(m["iv"]))
+            out["body"] = json.loads(dec)
+        except Exception as e:
+            out["bodyRaw"] = inner[:500]
+            out["decryptErr"] = str(e)
+    else:
+        out["body"] = inner
+    return out
+
+
+if __name__ == "__main__":
+    ov = sys.argv[1] if len(sys.argv) > 1 else "OPD2407_11.C.21_1210_202606232316"
+    host = sys.argv[2] if len(sys.argv) > 2 else "component-ota-cn.allawntech.com"
+    print(json.dumps(query(ov, "OPD2407", host=host),
+                     ensure_ascii=False, indent=2))
