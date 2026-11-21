@@ -2,7 +2,7 @@
   {
     "id": "2p1eikrg7",
     "title": "一加平板 OPD2407 获取 Root 全记录",
-    "excerpt": "# 一加平板 OPD2407 获取 Root 全记录：当 fastbootd 的 `fetch` 被锁死之后\n\n> 设备：一加平板 OPD2407（国行，代号 ossi / OP615AL1，MT6897）\n> 系统：ColorOS 16 / Android 16，`OPD2407_16.0.5.1001(CN01)`，SDK 36\n> 结果：Magisk 31.1 成功 root，`uid=0(root) context=u:r:magisk:s0`\n",
+    "excerpt": "一加平板 OPD2407 获取 Root 全记录：当 fastbootd 的 fetch 被锁死之",
     "category": "ROOT",
     "date": "2026-11-21T00:00:00.000Z",
     "contentPath": "posts/2p1eikrg7.md"
